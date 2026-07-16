@@ -4,6 +4,7 @@ import { fetchTikTokTrends } from "./tiktok";
 import { fetchXTrends } from "./x";
 import { fetchYouTubeTrends } from "./youtube";
 import { getCreatorCrawl } from "../creatorcrawl";
+import { filterUsTrends } from "../locale-filter";
 import { dedupeTrends } from "../normalize";
 import type { TrendItem } from "../types";
 
@@ -27,5 +28,5 @@ export async function ingestAllPlatforms(): Promise<TrendItem[]> {
     }
   }
 
-  return dedupeTrends(items);
+  return filterUsTrends(dedupeTrends(items));
 }

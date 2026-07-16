@@ -16,9 +16,9 @@ export function TrendCard({ trend, index }: Props) {
         href={trend.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex gap-4 sm:gap-5"
+        className="flex h-full flex-col"
       >
-        <div className="relative h-28 w-20 shrink-0 overflow-hidden bg-[var(--ink-muted)] sm:h-36 sm:w-28">
+        <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--ink-muted)]">
           {trend.thumbnailUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -31,49 +31,36 @@ export function TrendCard({ trend, index }: Props) {
               No thumb
             </div>
           )}
-          <span className="heat-badge absolute left-1.5 top-1.5">
-            {trend.heatScore}
+          <span className="heat-badge absolute left-2 top-2">{trend.heatScore}</span>
+          <span className="platform-badge absolute bottom-2 left-2">
+            {platformLabel(trend.platform)}
           </span>
         </div>
 
-        <div className="min-w-0 flex-1 py-0.5">
-          <div className="mb-1.5 flex flex-wrap items-center gap-2">
-            <span className="platform-badge">{platformLabel(trend.platform)}</span>
-            <span className="text-[11px] uppercase tracking-wider text-[var(--fog)]">
-              {trend.category}
-            </span>
-          </div>
+        <div className="flex flex-1 flex-col gap-1.5 p-3">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--fog)]">
+            {trend.category}
+          </p>
 
-          <h3 className="font-[family-name:var(--font-display)] text-base leading-snug text-[var(--ink)] sm:text-lg">
+          <h3 className="line-clamp-2 font-[family-name:var(--font-display)] text-sm leading-snug text-[var(--ink)] sm:text-base">
             {trend.title}
           </h3>
 
           {trend.creatorHandle && (
-            <p className="mt-1 text-sm text-[var(--fog)]">@{trend.creatorHandle}</p>
+            <p className="truncate text-xs text-[var(--fog)]">@{trend.creatorHandle}</p>
           )}
 
-          {trend.soundOrFormat && (
-            <p className="mt-1 text-sm text-[var(--accent)]">♪ {trend.soundOrFormat}</p>
-          )}
-
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--fog)]">
+          <div className="mt-auto flex flex-wrap gap-x-2 gap-y-0.5 pt-1 text-[11px] text-[var(--fog)]">
             {trend.metrics.views != null && (
               <span>{formatNumber(trend.metrics.views)} views</span>
             )}
             {trend.metrics.likes != null && (
               <span>{formatNumber(trend.metrics.likes)} likes</span>
             )}
-            {trend.metrics.comments != null && (
-              <span>{formatNumber(trend.metrics.comments)} comments</span>
-            )}
-            {trend.metrics.shares != null && (
-              <span>{formatNumber(trend.metrics.shares)} shares</span>
-            )}
           </div>
 
           {trend.insight && (
-            <p className="mt-3 border-l-2 border-[var(--accent)] pl-3 text-sm leading-relaxed text-[var(--ink-soft)]">
-              <span className="font-medium text-[var(--ink)]">Why act now — </span>
+            <p className="line-clamp-2 border-t border-[var(--line)] pt-2 text-[11px] leading-snug text-[var(--ink-soft)]">
               {trend.insight}
             </p>
           )}

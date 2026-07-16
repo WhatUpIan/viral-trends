@@ -64,9 +64,16 @@ body {
 }
 
 .trend-card {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #fff;
   animation: card-in 0.45s ease both;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.trend-card:hover {
+  border-color: var(--ink);
+  box-shadow: 0 8px 24px rgba(12, 15, 18, 0.06);
 }
 
 @keyframes card-in {

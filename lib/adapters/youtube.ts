@@ -15,19 +15,22 @@ export async function fetchYouTubeTrends(cc: CreatorCrawl): Promise<TrendItem[]>
     console.warn("[youtube] trendingShorts failed:", err);
   }
 
-  try {
-    const search = await cc.youtube.search({
-      query: "shorts viral",
-      uploadDate: "today",
-      sortBy: "view_count",
-      filter: "short",
-    });
-    for (const post of (search.data ?? []).slice(0, 10)) {
-      const item = postToTrendItem(post, "youtube");
-      if (item) items.push(item);
+  const queries = ["US viral shorts", "trending shorts USA"];
+  for (const query of queries) {
+    try {
+      const search = await cc.youtube.search({
+        query,
+        uploadDate: "today",
+        sortBy: "view_count",
+        filter: "short",
+      });
+      for (const post of (search.data ?? []).slice(0, 8)) {
+        const item = postToTrendItem(post, "youtube");
+        if (item) items.push(item);
+      }
+    } catch (err) {
+      console.warn(`[youtube] search "${query}" failed:`, err);
     }
-  } catch (err) {
-    console.warn("[youtube] search failed:", err);
   }
 
   return items.slice(0, 20);
