@@ -177,60 +177,66 @@ export async function persistDailyReport(opts: {
     reportId = inserted.id as string;
   }
 
+  const clean = (value: string) => value.replace(/\u0000/g, "").trim();
+
   const rows = opts.trends.map((t) => ({
     report_id: reportId,
     platform: t.platform,
-    external_id: String(t.externalId).slice(0, 500),
-    title: String(t.title || "Untitled").slice(0, 500),
-    url: String(t.url).slice(0, 2000),
-    thumbnail_url: t.thumbnailUrl ? String(t.thumbnailUrl).slice(0, 2000) : null,
-    creator_handle: t.creatorHandle ? String(t.creatorHandle).slice(0, 200) : null,
+    external_id: clean(String(t.externalId)).slice(0, 500),
+    title: clean(String(t.title || "Untitled")).slice(0, 500),
+    url: clean(String(t.url)).slice(0, 2000),
+    thumbnail_url: t.thumbnailUrl ? clean(String(t.thumbnailUrl)).slice(0, 2000) : null,
+    creator_handle: t.creatorHandle ? clean(String(t.creatorHandle)).slice(0, 200) : null,
     heat_score: Math.max(0, Math.min(100, Math.round(Number(t.heatScore)) || 0)),
     category: t.category,
-    insight: t.insight ? String(t.insight).slice(0, 1000) : null,
-    sound_or_format: t.soundOrFormat ? String(t.soundOrFormat).slice(0, 300) : null,
+    insight: t.insight ? clean(String(t.insight)).slice(0, 1000) : null,
+    sound_or_format: t.soundOrFormat ? clean(String(t.soundOrFormat)).slice(0, 300) : null,
   }));
 
-  // Insert metrics in a second update using explicit cast-safe payload.
-  const batchSize = 5;
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    const { error: insertError } = await supabase.from("trends").upsert(batch, {
-      onConflict: "report_id,platform,external_id",
-    });
-    if (insertError) {
-      throw new Error(insertError.message);
+  // Wipe-and-replace only after a probe insert succeeds, so we never blank the UI on failure.
+  const probe = rows[0];
+  if (probe) {
+    const probeRow = { ...probe, metrics: {} };
+    const { error: probeError } = await supabase.from("trends").insert(probeRow);
+    if (probeError && !probeError.message.includes("duplicate")) {
+      throw new Error(
+        JSON.stringify({
+          message: probeError.message,
+          details: probeError.details,
+          hint: probeError.hint,
+          code: probeError.code,
+        }),
+      );
     }
-  }
+    // Clear prior rows for a clean replace (probe row may already exist).
+    await supabase.from("trends").delete().eq("report_id", reportId);
 
-  // Attach metrics separately so a bad jsonb value is easy to isolate.
-  for (const t of opts.trends) {
-    const metrics = sanitizeMetrics(t.metrics);
-    const { error: metricsError } = await supabase
-      .from("trends")
-      .update({ metrics })
-      .eq("report_id", reportId)
-      .eq("platform", t.platform)
-      .eq("external_id", String(t.externalId).slice(0, 500));
-    if (metricsError) {
-      console.warn("[persist] metrics update failed:", metricsError.message);
+    const batchSize = 5;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batch = rows.slice(i, i + batchSize).map((r) => ({ ...r, metrics: {} }));
+      const { error: insertError } = await supabase.from("trends").insert(batch);
+      if (insertError) {
+        throw new Error(
+          JSON.stringify({
+            message: insertError.message,
+            details: insertError.details,
+            hint: insertError.hint,
+            code: insertError.code,
+            batchStart: i,
+          }),
+        );
+      }
     }
-  }
 
-  // Remove stale trends from earlier ingests that are no longer in today's set.
-  if (rows.length > 0) {
-    const keepIds = rows.map((r) => r.external_id);
-    const { data: existingTrends } = await supabase
-      .from("trends")
-      .select("id, external_id")
-      .eq("report_id", reportId);
-
-    const staleIds = (existingTrends ?? [])
-      .filter((t) => !keepIds.includes(t.external_id as string))
-      .map((t) => t.id as string);
-
-    if (staleIds.length > 0) {
-      await supabase.from("trends").delete().in("id", staleIds);
+    // Best-effort metrics attach (ignore failures — empty {} still renders).
+    for (const t of opts.trends) {
+      const metrics = sanitizeMetrics(t.metrics);
+      await supabase
+        .from("trends")
+        .update({ metrics })
+        .eq("report_id", reportId)
+        .eq("platform", t.platform)
+        .eq("external_id", String(t.externalId).slice(0, 500));
     }
   } else {
     await supabase.from("trends").delete().eq("report_id", reportId);
