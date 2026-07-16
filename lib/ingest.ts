@@ -57,7 +57,7 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
   }
 
   try {
-    const raw = await ingestAllPlatforms();
+    const { items: raw } = await ingestAllPlatforms();
     // Reserve slots for trending sounds/hashtags so 100-heat search posts
     // can't crowd them out of the report entirely.
     const ranked = scoreAndRank(raw);

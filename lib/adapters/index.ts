@@ -9,7 +9,18 @@ import { dedupeTrends } from "../normalize";
 import { filterQualityTrends } from "../quality-filter";
 import type { TrendItem } from "../types";
 
-export async function ingestAllPlatforms(): Promise<TrendItem[]> {
+export type IngestStats = {
+  fetched: number;
+  songsFetched: number;
+  afterUsFilter: number;
+  afterQualityFilter: number;
+  songsKept: number;
+};
+
+export async function ingestAllPlatforms(): Promise<{
+  items: TrendItem[];
+  stats: IngestStats;
+}> {
   const cc = getCreatorCrawl();
 
   const results = await Promise.allSettled([
@@ -29,5 +40,21 @@ export async function ingestAllPlatforms(): Promise<TrendItem[]> {
     }
   }
 
-  return filterQualityTrends(filterUsTrends(dedupeTrends(items)));
+  const isSound = (t: TrendItem) =>
+    t.externalId.startsWith("song-") || t.externalId.startsWith("hashtag-");
+
+  const deduped = dedupeTrends(items);
+  const usOnly = filterUsTrends(deduped);
+  const quality = filterQualityTrends(usOnly);
+
+  const stats: IngestStats = {
+    fetched: deduped.length,
+    songsFetched: deduped.filter(isSound).length,
+    afterUsFilter: usOnly.length,
+    afterQualityFilter: quality.length,
+    songsKept: quality.filter(isSound).length,
+  };
+  console.log("[ingest] stats:", JSON.stringify(stats));
+
+  return { items: quality, stats };
 }
