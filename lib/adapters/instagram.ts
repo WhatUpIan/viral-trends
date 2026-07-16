@@ -7,24 +7,29 @@ import type { TrendItem } from "../types";
 export async function fetchInstagramMetaTrends(cc: CreatorCrawl): Promise<TrendItem[]> {
   const items: TrendItem[] = [];
 
-  for (const [category, query] of INSTAGRAM_CATEGORY_QUERIES) {
-    try {
+  const results = await Promise.allSettled(
+    INSTAGRAM_CATEGORY_QUERIES.map(async ([category, query]) => {
       const res = await cc.instagram.searchReels({ query });
+      const out: TrendItem[] = [];
       (res.data ?? []).slice(0, 4).forEach((post, i) => {
         const ig = postToTrendItem(post, "instagram", { categoryHint: category });
-        if (ig) items.push(ig);
+        if (ig) out.push(ig);
         // Alternate half into the Meta Reels surface
         if (i % 2 === 0) {
           const meta = postToTrendItem(post, "meta", {
             externalId: `meta-${post.id ?? post.url}`,
             categoryHint: category,
           });
-          if (meta) items.push(meta);
+          if (meta) out.push(meta);
         }
       });
-    } catch (err) {
-      console.warn(`[instagram] searchReels "${query}" failed:`, err);
-    }
+      return out;
+    }),
+  );
+
+  for (const result of results) {
+    if (result.status === "fulfilled") items.push(...result.value);
+    else console.warn("[instagram] searchReels failed:", result.reason);
   }
 
   return items.slice(0, 30);

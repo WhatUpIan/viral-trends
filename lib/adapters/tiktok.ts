@@ -52,22 +52,25 @@ export async function fetchTikTokTrends(cc: CreatorCrawl): Promise<TrendItem[]> 
     console.warn("[tiktok] popularHashtags failed:", err);
   }
 
-  // Per-category US searches instead of raw FYP dump
-  for (const [category, query] of TIKTOK_CATEGORY_QUERIES) {
-    try {
+  // Per-category US searches instead of raw FYP dump — run in parallel to stay
+  // inside Vercel's function time limit
+  const searches = await Promise.allSettled(
+    TIKTOK_CATEGORY_QUERIES.map(async ([category, query]) => {
       const res = await cc.tiktok.searchKeyword({
         query,
         region: "US",
         sort_by: "relevance",
         date_posted: "this_week",
       });
-      for (const post of (res.data ?? []).slice(0, 4)) {
-        const item = postToTrendItem(post, "tiktok", { categoryHint: category });
-        if (item) items.push(item);
-      }
-    } catch (err) {
-      console.warn(`[tiktok] searchKeyword "${query}" failed:`, err);
-    }
+      return (res.data ?? [])
+        .slice(0, 4)
+        .map((post) => postToTrendItem(post, "tiktok", { categoryHint: category }))
+        .filter((item): item is TrendItem => item !== null);
+    }),
+  );
+  for (const result of searches) {
+    if (result.status === "fulfilled") items.push(...result.value);
+    else console.warn("[tiktok] searchKeyword failed:", result.reason);
   }
 
   return items.slice(0, 55);
