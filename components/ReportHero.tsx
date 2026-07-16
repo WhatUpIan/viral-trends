@@ -38,7 +38,7 @@ export function ReportHero({ reportDate, summary, trendCount }: Props) {
         </h1>
 
         <p className="mt-1 max-w-xl text-sm text-[var(--paper-muted)]">
-          US short-form signals for marketers and creators — act before the peak.
+          US remake-ready sounds, formats, and challenges — for brands and creators.
         </p>
 
         {summary && (

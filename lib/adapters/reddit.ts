@@ -3,22 +3,23 @@ import { isVideoPost } from "./tiktok";
 import { postToTrendItem } from "../normalize";
 import type { TrendItem } from "../types";
 
-const SUBREDDITS = ["videos", "tiktokcringe", "interestingasfuck", "nextfuckinglevel"];
+/** Creator-strategy subs — skip random viral dump subs */
+const SUBREDDITS = ["ContentCreators", "socialmedia", "InstagramMarketing"];
 
 export async function fetchRedditTrends(cc: CreatorCrawl): Promise<TrendItem[]> {
   const items: TrendItem[] = [];
 
-  for (const subreddit of SUBREDDITS.slice(0, 3)) {
+  for (const subreddit of SUBREDDITS.slice(0, 2)) {
     try {
       const res = await cc.reddit.subredditPosts({
         subreddit,
         sort: "hot",
-        timeframe: "day",
+        timeframe: "week",
       });
 
       const posts = (res.data ?? [])
-        .filter((p) => isVideoPost(p) || Boolean(p.url?.match(/v\.redd\.it|youtu|tiktok|instagram/i)))
-        .slice(0, 6);
+        .filter((p) => isVideoPost(p) || Boolean(p.url?.match(/tiktok|instagram|youtube|shorts|reel/i)))
+        .slice(0, 4);
 
       for (const post of posts) {
         const item = postToTrendItem(post, "reddit", {
@@ -33,5 +34,5 @@ export async function fetchRedditTrends(cc: CreatorCrawl): Promise<TrendItem[]> 
     }
   }
 
-  return items.slice(0, 15);
+  return items.slice(0, 8);
 }

@@ -6,6 +6,7 @@ import { fetchYouTubeTrends } from "./youtube";
 import { getCreatorCrawl } from "../creatorcrawl";
 import { filterUsTrends } from "../locale-filter";
 import { dedupeTrends } from "../normalize";
+import { filterQualityTrends } from "../quality-filter";
 import type { TrendItem } from "../types";
 
 export async function ingestAllPlatforms(): Promise<TrendItem[]> {
@@ -28,5 +29,5 @@ export async function ingestAllPlatforms(): Promise<TrendItem[]> {
     }
   }
 
-  return filterUsTrends(dedupeTrends(items));
+  return filterQualityTrends(filterUsTrends(dedupeTrends(items)));
 }

@@ -39,7 +39,7 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
 
   try {
     const raw = await ingestAllPlatforms();
-    const scored = scoreAndRank(raw).slice(0, 50);
+    const scored = scoreAndRank(raw).slice(0, 30);
     const classified = await classifyTrends(scored);
     const summary = await generateReportSummary(classified);
 

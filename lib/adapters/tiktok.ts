@@ -2,36 +2,25 @@ import type { CreatorCrawl, Post } from "@creatorcrawl/sdk";
 import { postToTrendItem } from "../normalize";
 import type { TrendItem } from "../types";
 
+/** US searches aimed at remakeable formats — not random FYP clips */
+const FORMAT_QUERIES = [
+  "POV challenge US",
+  "GRWM trend",
+  "transition trend TikTok",
+  "before after hack",
+];
+
 export async function fetchTikTokTrends(cc: CreatorCrawl): Promise<TrendItem[]> {
   const items: TrendItem[] = [];
 
-  try {
-    const feed = await cc.tiktok.trendingFeed({ region: "US" });
-    for (const post of feed.data ?? []) {
-      const item = postToTrendItem(post, "tiktok");
-      if (item) items.push(item);
-    }
-  } catch (err) {
-    console.warn("[tiktok] trendingFeed failed:", err);
-  }
-
-  try {
-    const popular = await cc.tiktok.popularVideos({ period: "7", countryCode: "US" });
-    for (const post of popular.data ?? []) {
-      const item = postToTrendItem(post, "tiktok");
-      if (item) items.push(item);
-    }
-  } catch (err) {
-    console.warn("[tiktok] popularVideos failed:", err);
-  }
-
+  // Sounds first — highest remake value for brands/creators
   try {
     const songs = await cc.tiktok.popularSongs({
       timePeriod: "7",
       countryCode: "US",
       rankType: "popular",
     });
-    for (const song of (songs.data ?? []).slice(0, 8)) {
+    for (const song of (songs.data ?? []).slice(0, 12)) {
       items.push({
         platform: "tiktok",
         externalId: `song-${song.id}`,
@@ -50,7 +39,9 @@ export async function fetchTikTokTrends(cc: CreatorCrawl): Promise<TrendItem[]> 
 
   try {
     const tags = await cc.tiktok.popularHashtags({ period: "7", countryCode: "US" });
-    for (const tag of (tags.data ?? []).slice(0, 5)) {
+    for (const tag of (tags.data ?? []).slice(0, 10)) {
+      const name = tag.name?.toLowerCase() ?? "";
+      if (/^(fyp|foryou|viral|trending|xyzbca|foryoupage)$/i.test(name)) continue;
       items.push({
         platform: "tiktok",
         externalId: `hashtag-${tag.name}`,
@@ -68,7 +59,36 @@ export async function fetchTikTokTrends(cc: CreatorCrawl): Promise<TrendItem[]> 
     console.warn("[tiktok] popularHashtags failed:", err);
   }
 
-  return items.slice(0, 25);
+  // Targeted format searches (US region) instead of raw FYP dump
+  for (const query of FORMAT_QUERIES) {
+    try {
+      const res = await cc.tiktok.searchKeyword({
+        query,
+        region: "US",
+        sort_by: "relevance",
+        date_posted: "this_week",
+      });
+      for (const post of (res.data ?? []).slice(0, 4)) {
+        const item = postToTrendItem(post, "tiktok");
+        if (item) items.push(item);
+      }
+    } catch (err) {
+      console.warn(`[tiktok] searchKeyword "${query}" failed:`, err);
+    }
+  }
+
+  // Small sample of US popular videos — quality filter will cull slop
+  try {
+    const popular = await cc.tiktok.popularVideos({ period: "7", countryCode: "US" });
+    for (const post of (popular.data ?? []).slice(0, 8)) {
+      const item = postToTrendItem(post, "tiktok");
+      if (item) items.push(item);
+    }
+  } catch (err) {
+    console.warn("[tiktok] popularVideos failed:", err);
+  }
+
+  return items.slice(0, 40);
 }
 
 export function isVideoPost(post: Post): boolean {

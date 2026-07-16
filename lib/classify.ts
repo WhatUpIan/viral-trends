@@ -63,10 +63,10 @@ export async function classifyTrends(scored: ScoredTrend[]): Promise<ClassifiedT
       messages: [
         {
           role: "system",
-          content: `You classify short-form viral trends for marketers and content creators.
+          content: `You classify short-form trends for US marketers and content creators who want to REMAKE or campaign on formats.
 Return JSON: { "items": [ { "i": number, "category": string, "insight": string } ] }
 category must be exactly one of: ${CATEGORIES.join(" | ")}
-insight: 1-2 sentences on why to act now (remake, campaign, or amplify). Be specific and actionable.`,
+insight: 1-2 sentences on HOW to remake or adapt this for a brand/channel (hook, format, CTA). Skip generic "it's viral" language. If it looks like personal slop with no remake angle, say so briefly and suggest skipping.`,
         },
         {
           role: "user",

@@ -3,13 +3,13 @@ import { isVideoPost } from "./tiktok";
 import { postToTrendItem } from "../normalize";
 import type { TrendItem } from "../types";
 
-/** High-signal accounts that often surface viral video clips on X */
-const SIGNAL_HANDLES = ["PopCrave", "Dexerto", "Complex", "TheEllenShow", "MrBeast"];
+/** US culture / creator-economy accounts — not random global clips */
+const SIGNAL_HANDLES = ["SocialMediaToday", "Later", "Hootsuite", "Buffer"];
 
 export async function fetchXTrends(cc: CreatorCrawl): Promise<TrendItem[]> {
   const items: TrendItem[] = [];
 
-  for (const handle of SIGNAL_HANDLES.slice(0, 3)) {
+  for (const handle of SIGNAL_HANDLES.slice(0, 2)) {
     try {
       const res = await cc.twitter.userTweets({ handle });
       const posts = (res.data ?? [])
@@ -18,7 +18,7 @@ export async function fetchXTrends(cc: CreatorCrawl): Promise<TrendItem[]> {
           (a, b) =>
             (b.like_count ?? 0) + (b.view_count ?? 0) - ((a.like_count ?? 0) + (a.view_count ?? 0)),
         )
-        .slice(0, 4);
+        .slice(0, 3);
 
       for (const post of posts) {
         const item = postToTrendItem(post, "x");
@@ -29,5 +29,5 @@ export async function fetchXTrends(cc: CreatorCrawl): Promise<TrendItem[]> {
     }
   }
 
-  return items.slice(0, 12);
+  return items.slice(0, 6);
 }

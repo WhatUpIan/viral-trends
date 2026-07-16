@@ -5,7 +5,11 @@ const INDIC_SCRIPT =
   /[\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/;
 
 const INDIA_MARKERS =
-  /#india\b|#indian\b|#bharat\b|#bollywood\b|#mumbai\b|#delhi\b|#chennai\b|#hyderabad\b|#kolkata\b|#bangalore\b|#bengaluru\b|#desi\b|#tollywood\b|#mollywood\b|#punjabi\b|#tamil\b|#telugu\b|#hindi\b|#indiatiktok\b|#exploreindia\b/i;
+  /#india\b|#indian\b|#bharat\b|#bollywood\b|#mumbai\b|#delhi\b|#chennai\b|#hyderabad\b|#kolkata\b|#bangalore\b|#bengaluru\b|#desi\b|#tollywood\b|#mollywood\b|#punjabi\b|#tamil\b|#telugu\b|#hindi\b|#indiatiktok\b|#exploreindia\b|#pakistan\b|#lahore\b|#karachi\b|#dubai\b|#philippines\b|#pinoy\b|#indonesia\b|#brazil\b|#mexico\b/i;
+
+/** Common romanized Hindi / Urdu / Hinglish that appears in "US" feeds */
+const ROMANIZED_SOUTH_ASIAN =
+  /\b(hai|hain|nahi|kya|kyu|kyun|acha|accha|bahut|mera|meri|tumhara|aap|bhai|didi|yaar|dil|pyar|pyaar|shadi|shaadi|rehman|namaste|ly lo|le lo|dekh|dekho|batao|sunao|sweety|sweetpari|jaan|jaaneman|wala|wali)\b/i;
 
 const NON_US_REGIONS = new Set([
   "in",
@@ -32,6 +36,14 @@ const NON_US_REGIONS = new Set([
   "mexico",
   "ng",
   "nigeria",
+  "eg",
+  "egypt",
+  "sa",
+  "saudi",
+  "ae",
+  "uae",
+  "tr",
+  "turkey",
 ]);
 
 const NON_EN_LANGS = new Set([
@@ -56,6 +68,14 @@ const NON_EN_LANGS = new Set([
   "punjabi",
   "ur",
   "urdu",
+  "id",
+  "ms",
+  "tl",
+  "fil",
+  "pt",
+  "es",
+  "ar",
+  "tr",
 ]);
 
 function readRawField(raw: unknown, key: string): string | undefined {
@@ -78,6 +98,7 @@ function isLikelyNonUs(item: TrendItem): boolean {
 
   if (INDIC_SCRIPT.test(text)) return true;
   if (INDIA_MARKERS.test(text)) return true;
+  if (ROMANIZED_SOUTH_ASIAN.test(text)) return true;
 
   const region = (
     readRawField(item.raw, "region") ??
@@ -104,7 +125,7 @@ function isLikelyNonUs(item: TrendItem): boolean {
   return false;
 }
 
-/** Best-effort US lean: drop Indic script, India hashtags, and clear non-US locales. */
+/** Best-effort US lean: drop Indic script, romanized Hinglish, and clear non-US locales. */
 export function filterUsTrends(items: TrendItem[]): TrendItem[] {
   return items.filter((item) => !isLikelyNonUs(item));
 }
