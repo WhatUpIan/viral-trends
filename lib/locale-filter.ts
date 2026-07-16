@@ -4,6 +4,9 @@ import type { TrendItem } from "./types";
 const INDIC_SCRIPT =
   /[\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/;
 
+/** Non-US currency symbols in captions are a strong non-US signal */
+const NON_US_CURRENCY = /[₹₨₦₱₩₫₴₺]/;
+
 const INDIA_MARKERS =
   /#india\b|#indian\b|#bharat\b|#bollywood\b|#mumbai\b|#delhi\b|#chennai\b|#hyderabad\b|#kolkata\b|#bangalore\b|#bengaluru\b|#desi\b|#tollywood\b|#mollywood\b|#punjabi\b|#tamil\b|#telugu\b|#hindi\b|#indiatiktok\b|#exploreindia\b|#pakistan\b|#lahore\b|#karachi\b|#dubai\b|#philippines\b|#pinoy\b|#indonesia\b|#brazil\b|#mexico\b/i;
 
@@ -97,6 +100,7 @@ function isLikelyNonUs(item: TrendItem): boolean {
   const text = `${item.title} ${item.soundOrFormat ?? ""} ${item.creatorHandle ?? ""}`;
 
   if (INDIC_SCRIPT.test(text)) return true;
+  if (NON_US_CURRENCY.test(text)) return true;
   if (INDIA_MARKERS.test(text)) return true;
   if (ROMANIZED_SOUTH_ASIAN.test(text)) return true;
 

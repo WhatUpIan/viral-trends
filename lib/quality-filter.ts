@@ -11,6 +11,10 @@ const SLOP_PATTERNS =
 const REMAKE_SIGNALS =
   /\b(pov|grwm|get ready with me|transition|before.?after|day in my life|routine|challenge|duet|stitch|tutorial|hack|recipe|haul|unbox|review|outfit|glow.?up|storytime| greente?xt| greenscreen|template|sound|audio|trend|format|demo|vs\.?|versus|ranking|tier list|myth|tested|tried)\b/i;
 
+/** Self-promo / agency ads masquerading as trends */
+const SELF_PROMO_PATTERNS =
+  /\b(dm me|dm us|link in bio|comment ["']?\w+["']? (and|to) (i'?ll|get|receive)|in need of (premium|professional)|hire (me|us)|my (agency|services)|book a call|free (guide|template|course) in bio|follow for more|want over \d+ hook)\b/i;
+
 const GENERIC_ONLY_HASHTAGS = /^(\s*#[\w.]+\s*)+$/;
 
 function hashtagSpamRatio(title: string): number {
@@ -40,6 +44,7 @@ function isSlop(item: TrendItem): boolean {
   if (title === "Untitled") return true;
 
   if (ROMANIZED_NON_EN.test(title)) return true;
+  if (SELF_PROMO_PATTERNS.test(title)) return true;
   if (GENERIC_ONLY_HASHTAGS.test(title)) return true;
   if (hashtagSpamRatio(title) >= 0.6) return true;
 
