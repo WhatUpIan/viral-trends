@@ -131,6 +131,33 @@ export type PersistTrendInput = {
   raw?: unknown;
 };
 
+/** Strip non-JSON values (undefined, BigInt, NaN) so jsonb inserts succeed. */
+function toJsonb(value: unknown): Record<string, unknown> | null {
+  if (value == null) return null;
+  try {
+    const parsed = JSON.parse(
+      JSON.stringify(value, (_key, v) => {
+        if (typeof v === "bigint") return v.toString();
+        if (typeof v === "number" && !Number.isFinite(v)) return null;
+        return v;
+      }),
+    );
+    if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+    return { value: parsed };
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeMetrics(metrics: TrendMetrics): TrendMetrics {
+  const out: TrendMetrics = {};
+  for (const key of ["views", "likes", "comments", "shares"] as const) {
+    const n = metrics[key];
+    if (typeof n === "number" && Number.isFinite(n)) out[key] = n;
+  }
+  return out;
+}
+
 export async function persistDailyReport(opts: {
   reportDate: string;
   summary: string;
@@ -182,12 +209,12 @@ export async function persistDailyReport(opts: {
       url: t.url,
       thumbnail_url: t.thumbnailUrl ?? null,
       creator_handle: t.creatorHandle ?? null,
-      metrics: t.metrics,
+      metrics: toJsonb(sanitizeMetrics(t.metrics)) ?? {},
       heat_score: t.heatScore,
       category: t.category,
       insight: t.insight,
       sound_or_format: t.soundOrFormat ?? null,
-      raw: t.raw ?? null,
+      raw: toJsonb(t.raw),
     }));
 
     const { error: insertError } = await supabase.from("trends").insert(rows);
