@@ -185,24 +185,35 @@ export async function persistDailyReport(opts: {
     url: String(t.url).slice(0, 2000),
     thumbnail_url: t.thumbnailUrl ? String(t.thumbnailUrl).slice(0, 2000) : null,
     creator_handle: t.creatorHandle ? String(t.creatorHandle).slice(0, 200) : null,
-    metrics: sanitizeMetrics(t.metrics),
-    heat_score: Math.max(0, Math.min(100, Math.round(t.heatScore) || 0)),
+    heat_score: Math.max(0, Math.min(100, Math.round(Number(t.heatScore)) || 0)),
     category: t.category,
     insight: t.insight ? String(t.insight).slice(0, 1000) : null,
     sound_or_format: t.soundOrFormat ? String(t.soundOrFormat).slice(0, 300) : null,
-    // Never store raw CreatorCrawl payloads — they routinely break jsonb inserts.
-    raw: null,
   }));
 
-  // Upsert first so a failed write never wipes the previous successful report.
-  const batchSize = 10;
+  // Insert metrics in a second update using explicit cast-safe payload.
+  const batchSize = 5;
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
-    const { error: upsertError } = await supabase.from("trends").upsert(batch, {
+    const { error: insertError } = await supabase.from("trends").upsert(batch, {
       onConflict: "report_id,platform,external_id",
     });
-    if (upsertError) {
-      throw new Error(upsertError.message);
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+  }
+
+  // Attach metrics separately so a bad jsonb value is easy to isolate.
+  for (const t of opts.trends) {
+    const metrics = sanitizeMetrics(t.metrics);
+    const { error: metricsError } = await supabase
+      .from("trends")
+      .update({ metrics })
+      .eq("report_id", reportId)
+      .eq("platform", t.platform)
+      .eq("external_id", String(t.externalId).slice(0, 500));
+    if (metricsError) {
+      console.warn("[persist] metrics update failed:", metricsError.message);
     }
   }
 
