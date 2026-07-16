@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #0c0f12;
+  --ink-soft: #2a3038;
+  --ink-muted: #1a1f26;
+  --paper: #f6f3ee;
+  --paper-soft: #e8e3da;
+  --paper-muted: #b8b0a4;
+  --fog: #6b7280;
+  --line: #e2ddd4;
+  --accent: #e8ff47;
+  --accent-ink: #1a2200;
+  --heat: #ff5c33;
+  --background: var(--paper);
+  --foreground: var(--ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+.report-hero {
+  background: linear-gradient(165deg, #0c0f12 0%, #1a222c 55%, #12161c 100%);
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(232, 255, 71, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 255, 71, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, black 20%, transparent 75%);
+}
+
+.filter-chip {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.filter-chip-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.trend-card {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1.25rem;
+  animation: card-in 0.45s ease both;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.platform-badge {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.45rem;
+}
+
+.heat-badge {
+  background: var(--heat);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes heat-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 92, 51, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(255, 92, 51, 0);
+  }
+}
+
+.heat-badge {
+  animation: heat-pulse 2.4s ease-in-out infinite;
 }
