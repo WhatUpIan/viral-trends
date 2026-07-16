@@ -8,6 +8,10 @@ const FALLBACK_INSIGHT =
 function heuristicCategory(item: ScoredTrend): Category {
   const text = `${item.title} ${item.soundOrFormat ?? ""}`.toLowerCase();
 
+  if (item.platform === "tiktok" && item.externalId.startsWith("song-")) {
+    return "Sounds & Audio";
+  }
+  if (item.categoryHint) return item.categoryHint;
   if (item.soundOrFormat && /sound|audio|music|♪|song/i.test(item.soundOrFormat)) {
     return "Sounds & Audio";
   }
@@ -52,6 +56,7 @@ export async function classifyTrends(scored: ScoredTrend[]): Promise<ClassifiedT
     platform: t.platform,
     title: t.title.slice(0, 120),
     sound: t.soundOrFormat?.slice(0, 80) ?? null,
+    categoryHint: t.categoryHint ?? null,
     heat: t.heatScore,
   }));
 
@@ -66,6 +71,7 @@ export async function classifyTrends(scored: ScoredTrend[]): Promise<ClassifiedT
           content: `You classify short-form trends for US marketers and content creators who want to REMAKE or campaign on formats.
 Return JSON: { "items": [ { "i": number, "category": string, "insight": string } ] }
 category must be exactly one of: ${CATEGORIES.join(" | ")}
+When categoryHint is provided it came from a targeted search — keep it unless the content clearly belongs elsewhere.
 insight: 1-2 sentences on HOW to remake or adapt this for a brand/channel (hook, format, CTA). Skip generic "it's viral" language. If it looks like personal slop with no remake angle, say so briefly and suggest skipping.`,
         },
         {

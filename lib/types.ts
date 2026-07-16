@@ -57,6 +57,8 @@ export type TrendItem = {
   metrics: TrendMetrics;
   publishedAt?: string;
   soundOrFormat?: string;
+  /** Category the sourcing query targeted; classifier uses it as a strong prior. */
+  categoryHint?: Category;
   raw: unknown;
 };
 

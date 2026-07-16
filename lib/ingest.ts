@@ -8,6 +8,25 @@ import {
 } from "./reports";
 import { scoreAndRank } from "./score";
 import { isSupabaseConfigured } from "./supabase";
+import type { Category, ClassifiedTrend } from "./types";
+
+const MAX_PER_CATEGORY = 5;
+const MAX_TOTAL = 36;
+
+/** Cap each category so one bucket (e.g. Sounds & Audio) can't flood the report. */
+function balanceCategories(trends: ClassifiedTrend[]): ClassifiedTrend[] {
+  const sorted = [...trends].sort((a, b) => b.heatScore - a.heatScore);
+  const counts = new Map<Category, number>();
+  const out: ClassifiedTrend[] = [];
+  for (const trend of sorted) {
+    const used = counts.get(trend.category) ?? 0;
+    if (used >= MAX_PER_CATEGORY) continue;
+    counts.set(trend.category, used + 1);
+    out.push(trend);
+    if (out.length >= MAX_TOTAL) break;
+  }
+  return out;
+}
 
 export type IngestResult = {
   ok: boolean;
@@ -39,8 +58,8 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
 
   try {
     const raw = await ingestAllPlatforms();
-    const scored = scoreAndRank(raw).slice(0, 30);
-    const classified = await classifyTrends(scored);
+    const scored = scoreAndRank(raw).slice(0, 40);
+    const classified = balanceCategories(await classifyTrends(scored));
     const summary = await generateReportSummary(classified);
 
     const { reportId } = await persistDailyReport({

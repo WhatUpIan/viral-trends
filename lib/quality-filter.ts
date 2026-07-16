@@ -25,6 +25,8 @@ function isRemakeSignal(item: TrendItem): boolean {
   if (item.externalId.startsWith("song-") || item.externalId.startsWith("hashtag-")) {
     return true;
   }
+  // Sourced by a category-targeted remake query
+  if (item.categoryHint) return true;
   if (item.soundOrFormat && /sound|audio|music|hashtag|♪/i.test(item.soundOrFormat)) {
     return true;
   }

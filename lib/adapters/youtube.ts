@@ -1,18 +1,12 @@
 import type { CreatorCrawl } from "@creatorcrawl/sdk";
+import { YOUTUBE_CATEGORY_QUERIES } from "../category-queries";
 import { postToTrendItem } from "../normalize";
 import type { TrendItem } from "../types";
-
-const REMAKE_QUERIES = [
-  "POV shorts trend",
-  "GRWM shorts",
-  "before after shorts hack",
-  "product demo shorts",
-];
 
 export async function fetchYouTubeTrends(cc: CreatorCrawl): Promise<TrendItem[]> {
   const items: TrendItem[] = [];
 
-  for (const query of REMAKE_QUERIES) {
+  for (const [category, query] of YOUTUBE_CATEGORY_QUERIES) {
     try {
       const search = await cc.youtube.search({
         query,
@@ -20,8 +14,8 @@ export async function fetchYouTubeTrends(cc: CreatorCrawl): Promise<TrendItem[]>
         sortBy: "relevance",
         filter: "short",
       });
-      for (const post of (search.data ?? []).slice(0, 5)) {
-        const item = postToTrendItem(post, "youtube");
+      for (const post of (search.data ?? []).slice(0, 4)) {
+        const item = postToTrendItem(post, "youtube", { categoryHint: category });
         if (item) items.push(item);
       }
     } catch (err) {
@@ -39,5 +33,5 @@ export async function fetchYouTubeTrends(cc: CreatorCrawl): Promise<TrendItem[]>
     console.warn("[youtube] trendingShorts failed:", err);
   }
 
-  return items.slice(0, 18);
+  return items.slice(0, 30);
 }
