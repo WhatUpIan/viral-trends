@@ -11,9 +11,9 @@ const SLOP_PATTERNS =
 const REMAKE_SIGNALS =
   /\b(pov|grwm|get ready with me|transition|before.?after|day in my life|routine|challenge|duet|stitch|tutorial|hack|recipe|haul|unbox|review|outfit|glow.?up|storytime| greente?xt| greenscreen|template|sound|audio|trend|format|demo|vs\.?|versus|ranking|tier list|myth|tested|tried)\b/i;
 
-/** Self-promo / agency ads masquerading as trends */
+/** Self-promo / agency / sponsored ads masquerading as trends */
 const SELF_PROMO_PATTERNS =
-  /\b(dm me|dm us|link in bio|comment ["']?\w+["']? (and|to) (i'?ll|get|receive)|in need of (premium|professional)|hire (me|us)|my (agency|services)|book a call|free (guide|template|course) in bio|follow for more|want over \d+ hook)\b/i;
+  /\b(dm me|dm us|link in bio|comment ["']?\w+["']? (and|to) (i'?ll|get|receive)|in need of (premium|professional)|hire (me|us)|my (agency|services)|book a call|free (guide|template|course) in bio|follow for more|want over \d+ hook|boost(s)? (your )?sales|use this free tool|stop (wasting|paying)|helps you (boost|scale|grow))\b|#\w*partner\b|#ad\b|#sponsored\b/i;
 
 const GENERIC_ONLY_HASHTAGS = /^(\s*#[\w.]+\s*)+$/;
 

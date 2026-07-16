@@ -58,7 +58,16 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
 
   try {
     const raw = await ingestAllPlatforms();
-    const scored = scoreAndRank(raw).slice(0, 40);
+    // Reserve slots for trending sounds/hashtags so 100-heat search posts
+    // can't crowd them out of the report entirely.
+    const ranked = scoreAndRank(raw);
+    const isSoundOrTag = (id: string) =>
+      id.startsWith("song-") || id.startsWith("hashtag-");
+    const sounds = ranked.filter((t) => isSoundOrTag(t.externalId)).slice(0, 8);
+    const rest = ranked
+      .filter((t) => !isSoundOrTag(t.externalId))
+      .slice(0, 40 - sounds.length);
+    const scored = [...sounds, ...rest].sort((a, b) => b.heatScore - a.heatScore);
     const classified = balanceCategories(await classifyTrends(scored));
     const summary = await generateReportSummary(classified);
 

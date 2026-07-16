@@ -7,6 +7,10 @@ const INDIC_SCRIPT =
 /** Non-US currency symbols in captions are a strong non-US signal */
 const NON_US_CURRENCY = /[₹₨₦₱₩₫₴₺]/;
 
+/** Other non-English scripts: CJK, Thai, Arabic, Cyrillic, Vietnamese diacritics */
+const OTHER_NON_EN_SCRIPT =
+  /[\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF\u0E00-\u0E7F\u0600-\u06FF\u0400-\u04FF\u0102\u0103\u0110\u0111\u01A0\u01A1\u01AF\u01B0\u1EA0-\u1EF9]/;
+
 const INDIA_MARKERS =
   /#india\b|#indian\b|#bharat\b|#bollywood\b|#mumbai\b|#delhi\b|#chennai\b|#hyderabad\b|#kolkata\b|#bangalore\b|#bengaluru\b|#desi\b|#tollywood\b|#mollywood\b|#punjabi\b|#tamil\b|#telugu\b|#hindi\b|#indiatiktok\b|#exploreindia\b|#pakistan\b|#lahore\b|#karachi\b|#dubai\b|#philippines\b|#pinoy\b|#indonesia\b|#brazil\b|#mexico\b/i;
 
@@ -100,6 +104,7 @@ function isLikelyNonUs(item: TrendItem): boolean {
   const text = `${item.title} ${item.soundOrFormat ?? ""} ${item.creatorHandle ?? ""}`;
 
   if (INDIC_SCRIPT.test(text)) return true;
+  if (OTHER_NON_EN_SCRIPT.test(text)) return true;
   if (NON_US_CURRENCY.test(text)) return true;
   if (INDIA_MARKERS.test(text)) return true;
   if (ROMANIZED_SOUTH_ASIAN.test(text)) return true;
