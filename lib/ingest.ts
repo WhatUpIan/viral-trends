@@ -1,4 +1,4 @@
-import { ingestAllPlatforms } from "./adapters";
+import { ingestAllPlatforms, type IngestStats } from "./adapters";
 import { classifyTrends, generateReportSummary } from "./classify";
 import { isCreatorCrawlConfigured } from "./creatorcrawl";
 import {
@@ -35,6 +35,7 @@ export type IngestResult = {
   reportId?: string;
   error?: string;
   usedMock?: boolean;
+  stats?: IngestStats;
 };
 
 export async function runDailyIngest(reportDate = getTodayDateString()): Promise<IngestResult> {
@@ -57,7 +58,7 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
   }
 
   try {
-    const { items: raw } = await ingestAllPlatforms();
+    const { items: raw, stats } = await ingestAllPlatforms();
     // Reserve slots for trending sounds/hashtags so 100-heat search posts
     // can't crowd them out of the report entirely.
     const ranked = scoreAndRank(raw);
@@ -95,6 +96,7 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
       reportDate,
       trendCount: classified.length,
       reportId,
+      stats,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Ingest failed";
