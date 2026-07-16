@@ -131,24 +131,6 @@ export type PersistTrendInput = {
   raw?: unknown;
 };
 
-/** Strip non-JSON values (undefined, BigInt, NaN) so jsonb inserts succeed. */
-function toJsonb(value: unknown): Record<string, unknown> | null {
-  if (value == null) return null;
-  try {
-    const parsed = JSON.parse(
-      JSON.stringify(value, (_key, v) => {
-        if (typeof v === "bigint") return v.toString();
-        if (typeof v === "number" && !Number.isFinite(v)) return null;
-        return v;
-      }),
-    );
-    if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
-    return { value: parsed };
-  } catch {
-    return null;
-  }
-}
-
 function sanitizeMetrics(metrics: TrendMetrics): TrendMetrics {
   const out: TrendMetrics = {};
   for (const key of ["views", "likes", "comments", "shares"] as const) {
@@ -178,17 +160,12 @@ export async function persistDailyReport(opts: {
 
   if (existing?.id) {
     reportId = existing.id as string;
-    await supabase.from("trends").delete().eq("report_id", reportId);
-    await supabase
-      .from("reports")
-      .update({ status: "ready", summary: opts.summary })
-      .eq("id", reportId);
   } else {
     const { data: inserted, error } = await supabase
       .from("reports")
       .insert({
         report_date: opts.reportDate,
-        status: "ready",
+        status: "pending",
         summary: opts.summary,
       })
       .select("id")
@@ -200,27 +177,61 @@ export async function persistDailyReport(opts: {
     reportId = inserted.id as string;
   }
 
-  if (opts.trends.length > 0) {
-    const rows = opts.trends.map((t) => ({
-      report_id: reportId,
-      platform: t.platform,
-      external_id: t.externalId,
-      title: t.title,
-      url: t.url,
-      thumbnail_url: t.thumbnailUrl ?? null,
-      creator_handle: t.creatorHandle ?? null,
-      metrics: toJsonb(sanitizeMetrics(t.metrics)) ?? {},
-      heat_score: t.heatScore,
-      category: t.category,
-      insight: t.insight,
-      sound_or_format: t.soundOrFormat ?? null,
-      raw: toJsonb(t.raw),
-    }));
+  const rows = opts.trends.map((t) => ({
+    report_id: reportId,
+    platform: t.platform,
+    external_id: String(t.externalId).slice(0, 500),
+    title: String(t.title || "Untitled").slice(0, 500),
+    url: String(t.url).slice(0, 2000),
+    thumbnail_url: t.thumbnailUrl ? String(t.thumbnailUrl).slice(0, 2000) : null,
+    creator_handle: t.creatorHandle ? String(t.creatorHandle).slice(0, 200) : null,
+    metrics: sanitizeMetrics(t.metrics),
+    heat_score: Math.max(0, Math.min(100, Math.round(t.heatScore) || 0)),
+    category: t.category,
+    insight: t.insight ? String(t.insight).slice(0, 1000) : null,
+    sound_or_format: t.soundOrFormat ? String(t.soundOrFormat).slice(0, 300) : null,
+    // Never store raw CreatorCrawl payloads — they routinely break jsonb inserts.
+    raw: null,
+  }));
 
-    const { error: insertError } = await supabase.from("trends").insert(rows);
-    if (insertError) {
-      throw new Error(insertError.message);
+  // Upsert first so a failed write never wipes the previous successful report.
+  const batchSize = 10;
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const { error: upsertError } = await supabase.from("trends").upsert(batch, {
+      onConflict: "report_id,platform,external_id",
+    });
+    if (upsertError) {
+      throw new Error(upsertError.message);
     }
+  }
+
+  // Remove stale trends from earlier ingests that are no longer in today's set.
+  if (rows.length > 0) {
+    const keepIds = rows.map((r) => r.external_id);
+    const { data: existingTrends } = await supabase
+      .from("trends")
+      .select("id, external_id")
+      .eq("report_id", reportId);
+
+    const staleIds = (existingTrends ?? [])
+      .filter((t) => !keepIds.includes(t.external_id as string))
+      .map((t) => t.id as string);
+
+    if (staleIds.length > 0) {
+      await supabase.from("trends").delete().in("id", staleIds);
+    }
+  } else {
+    await supabase.from("trends").delete().eq("report_id", reportId);
+  }
+
+  const { error: reportError } = await supabase
+    .from("reports")
+    .update({ status: "ready", summary: opts.summary })
+    .eq("id", reportId);
+
+  if (reportError) {
+    throw new Error(reportError.message);
   }
 
   return { reportId };
