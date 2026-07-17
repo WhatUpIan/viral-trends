@@ -15,9 +15,9 @@ const body = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Signalbrief — Daily Viral Trends Report",
+  title: "Signalbrief — Internet Intelligence",
   description:
-    "Daily short-form viral trends across TikTok, YouTube, Instagram, X, Reddit, and Meta — for marketers and creators.",
+    "Internet intelligence for marketers: daily viral signals, brand health, morning brief, and mention monitoring across social and the web.",
 };
 
 export default function RootLayout({

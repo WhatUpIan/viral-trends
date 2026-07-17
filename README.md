@@ -1,8 +1,10 @@
-# Signalbrief — Daily Viral Trends Report
+# Signalbrief — Internet Intelligence
 
-Daily short-form viral report for **marketers and content creators**. Pulls signals from TikTok, YouTube Shorts, Instagram / Meta Reels, X, and Reddit via [CreatorCrawl](https://creatorcrawl.com), scores heat, categorizes trends, and publishes a categorized daily brief.
+**Internet intelligence** for marketers and content creators: a personal **Dashboard**, AI **Morning Brief**, daily **Trends** module, and deep **Brand** profiles with mention monitoring — built on an entity graph (trends, creators, sounds, topics, companies, …).
 
-Also includes **user accounts** (Supabase Auth), **per-user category priorities**, and **brand mention monitoring**: add a brand, get auto-generated keywords (plus custom and negative keywords), and track mentions across social platforms, Google, and Google News — including top comments for feedback tracking.
+Pulls short-form signals via [CreatorCrawl](https://creatorcrawl.com), scores heat, categorizes remake-ready trends, and monitors brand mentions across social + the web (SearchAPI.io).
+
+See [`FUNCTIONALITY.md`](FUNCTIONALITY.md) for the full module map and Phase 2 deferrals.
 
 ## Quick start
 
@@ -14,12 +16,14 @@ cp .env.example .env.local
 npm run dev
 ```
 
+- **Dashboard (signed in):** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+- **Morning Brief:** [http://localhost:3000/brief](http://localhost:3000/brief)
+- **Trends module:** [http://localhost:3000/trends](http://localhost:3000/trends)
 - **UI preview (mock data):** [http://localhost:3000/preview](http://localhost:3000/preview)
-- **Today’s report:** [http://localhost:3000](http://localhost:3000)
 - **About / scoring:** [http://localhost:3000/about](http://localhost:3000/about)
 - **Archive:** [http://localhost:3000/archive](http://localhost:3000/archive)
 
-For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the home page serves sample trends.
+For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the trends module can serve sample data.
 
 ## Environment variables
 
@@ -29,7 +33,7 @@ For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes (prod) | Anon key (read) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes (ingest) | Service role for cron writes |
 | `CREATORCRAWL_API_KEY` | Yes (ingest) | Third-party social data |
-| `OPENAI_API_KEY` | Optional | Category + insight blurbs + brand keyword generation |
+| `OPENAI_API_KEY` | Optional | Classification, morning brief, brand research/insights |
 | `OPENAI_MODEL` | Optional | Default `gpt-4o-mini` |
 | `SEARCHAPI_API_KEY` | Optional | Web + Google News brand mentions ([searchapi.io](https://www.searchapi.io)) |
 | `CRON_SECRET` | Yes (ingest) | Auth for `/api/cron/ingest` and `/api/cron/mentions` |
@@ -38,16 +42,24 @@ For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the
 ## Database setup
 
 1. Create a Supabase project.
-2. Run the SQL migrations in order in the SQL editor (or via Supabase CLI): [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), [`003_brand_social_accounts.sql`](supabase/migrations/003_brand_social_accounts.sql), [`004_mention_workflow.sql`](supabase/migrations/004_mention_workflow.sql), [`005_brand_metadata.sql`](supabase/migrations/005_brand_metadata.sql).
+2. Run the SQL migrations in order in the SQL editor (or via Supabase CLI): [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), [`003_brand_social_accounts.sql`](supabase/migrations/003_brand_social_accounts.sql), [`004_mention_workflow.sql`](supabase/migrations/004_mention_workflow.sql), [`005_brand_metadata.sql`](supabase/migrations/005_brand_metadata.sql), [`006_entity_graph.sql`](supabase/migrations/006_entity_graph.sql).
 3. In **Authentication → Providers**, make sure **Email** is enabled (it is by default). Optionally disable "Confirm email" for faster local testing.
 4. Add URL + keys to `.env.local`.
 
-Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `brands`, `brand_keywords`, `brand_mentions`, `brand_mention_comments`.
+Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `brands`, `brand_keywords`, `brand_mentions`, `brand_mention_comments`, `brand_social_accounts`, `entities`, `entity_edges`, `daily_briefs`.
+
+## Internet Intelligence modules
+
+- `/dashboard` — My Dashboard (KPIs, brand health, internet right now, alerts). Logged-in home.
+- `/brief` — AI Morning Brief (cached per user/day).
+- `/trends` — Daily viral trends report (categorized grid).
+- `/brands` — Brand entities with health scores, mentions, feedback, AI setup.
+- `/settings/categories` — Category order for the Trends module.
 
 ## User accounts & category priorities
 
-- `/signup` and `/login` — email + password via Supabase Auth.
-- `/settings/categories` — logged-in users can reorder categories and hide ones they don't care about; the daily report follows their order.
+- `/signup` and `/login` — email + password via Supabase Auth (default redirect: `/dashboard`).
+- `/settings/categories` — reorder/hide categories for the Trends module.
 - All user tables are protected with Row Level Security.
 
 ## Brand mention monitoring
@@ -173,4 +185,4 @@ npm run lint     # eslint
 
 ## Brand
 
-**Signalbrief** — editorial daily brief, not a dense analytics dashboard.
+**Signalbrief** — Internet Intelligence: dashboard, AI brief, trends module, and brand entities — not a dense analytics spreadsheet.

@@ -1,6 +1,7 @@
 import { ingestAllPlatforms, type IngestStats } from "./adapters";
 import { classifyTrends, generateReportSummary } from "./classify";
 import { isCreatorCrawlConfigured } from "./creatorcrawl";
+import { linkReportEntities } from "./entity-link";
 import {
   getTodayDateString,
   markReportFailed,
@@ -72,24 +73,37 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
     const classified = balanceCategories(await classifyTrends(scored));
     const summary = await generateReportSummary(classified);
 
+    const persistTrends = classified.map((t) => ({
+      platform: t.platform,
+      externalId: t.externalId,
+      title: t.title,
+      url: t.url,
+      thumbnailUrl: t.thumbnailUrl,
+      creatorHandle: t.creatorHandle,
+      metrics: t.metrics,
+      heatScore: t.heatScore,
+      category: t.category,
+      insight: t.insight,
+      soundOrFormat: t.soundOrFormat,
+      raw: t.raw,
+    }));
+
     const { reportId } = await persistDailyReport({
       reportDate,
       summary,
-      trends: classified.map((t) => ({
-        platform: t.platform,
-        externalId: t.externalId,
-        title: t.title,
-        url: t.url,
-        thumbnailUrl: t.thumbnailUrl,
-        creatorHandle: t.creatorHandle,
-        metrics: t.metrics,
-        heatScore: t.heatScore,
-        category: t.category,
-        insight: t.insight,
-        soundOrFormat: t.soundOrFormat,
-        raw: t.raw,
-      })),
+      trends: persistTrends,
     });
+
+    // Best-effort entity graph — never fail the ingest on graph errors
+    try {
+      await linkReportEntities({
+        reportId,
+        reportDate,
+        trends: persistTrends,
+      });
+    } catch (err) {
+      console.warn("[ingest] entity link failed:", err);
+    }
 
     return {
       ok: true,

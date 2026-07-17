@@ -6,10 +6,14 @@ import {
   getMentionComments,
   type BrandMention,
 } from "@/lib/brands";
+import { getBrandHealth } from "@/lib/brand-insights";
+import { AppShell } from "@/components/AppShell";
+import { BrandHealthStrip } from "@/components/BrandHealthStrip";
 import { BrandSocialFields } from "@/components/BrandSocialFields";
 import { FeedbackList } from "@/components/FeedbackList";
 import { MentionsList } from "@/components/MentionsList";
 import { RunMonitoringButton } from "@/components/RunMonitoringButton";
+import { getGreetingName } from "@/lib/greeting";
 import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -58,6 +62,9 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
   const brand = await getBrand(id);
   if (!brand) notFound();
 
+  const greetingName = await getGreetingName();
+  const health = await getBrandHealth(id);
+
   const { tab: rawTab, platform, flag } = await searchParams;
   const tab =
     rawTab === "feedback" || rawTab === "profile" || rawTab === "mentions"
@@ -70,10 +77,11 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
     PLATFORM_NAV.some((p) => p.id === platform) && platform ? platform : null;
 
   return (
-    <main className="min-h-screen bg-[var(--paper)]">
+    <AppShell pathname="/brands" greetingName={greetingName}>
+      <div className="min-h-screen bg-[var(--paper)]">
       {/* Top bar */}
       <header className="border-b border-[var(--line)] bg-[var(--ink)] text-[var(--paper)]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+        <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <div className="min-w-0">
             <Link
               href="/brands"
@@ -87,6 +95,9 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
             <p className="truncate text-xs text-[var(--paper-muted)]">
               {brand.website ?? "No website"} ·{" "}
               {brand.status === "active" ? "Monitoring active" : "Paused"}
+              {health && health.score > 0
+                ? ` · Health ${health.score} (${health.sentimentLabel})`
+                : ""}
             </p>
           </div>
           <div className="flex shrink-0 items-start gap-2">
@@ -111,7 +122,13 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-7xl flex-col gap-0 lg:flex-row">
+      {health && (
+        <div className="border-b border-[var(--line)] px-5 py-5 sm:px-8">
+          <BrandHealthStrip health={health} />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-0 lg:flex-row">
         {/* Side menu */}
         <aside className="border-b border-[var(--line)] bg-white lg:w-56 lg:shrink-0 lg:border-b-0 lg:border-r">
           <nav className="sticky top-0 flex gap-1 overflow-x-auto px-3 py-4 lg:flex-col lg:overflow-visible lg:px-3 lg:py-6">
@@ -198,7 +215,8 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
           )}
         </div>
       </div>
-    </main>
+      </div>
+    </AppShell>
   );
 }
 

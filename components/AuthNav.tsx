@@ -15,11 +15,11 @@ export async function AuthNav() {
 
   return (
     <>
-      <Link href="/brands" className="transition hover:text-[var(--paper)]">
-        Brands
+      <Link href="/dashboard" className="transition hover:text-[var(--paper)]">
+        Dashboard
       </Link>
-      <Link href="/settings/categories" className="transition hover:text-[var(--paper)]">
-        Settings
+      <Link href="/brief" className="transition hover:text-[var(--paper)]">
+        Brief
       </Link>
       <form action="/auth/signout" method="post" className="inline">
         <button type="submit" className="cursor-pointer transition hover:text-[var(--paper)]">

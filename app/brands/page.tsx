@@ -1,44 +1,41 @@
 import { listBrands } from "@/lib/brands";
+import { AppShell } from "@/components/AppShell";
 import { RunMonitoringButton } from "@/components/RunMonitoringButton";
+import { getGreetingName } from "@/lib/greeting";
 import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Brand monitoring — Signalbrief" };
+export const metadata = { title: "Brands — Signalbrief" };
 
 export default async function BrandsPage() {
   const user = await getUser();
   if (!user) redirect("/login?next=/brands");
 
   const brands = await listBrands();
+  const name = await getGreetingName();
 
   return (
-    <main className="min-h-screen">
-      <div className="border-b border-[var(--line)] bg-[var(--ink)] px-5 py-8 text-[var(--paper)] sm:px-8">
-        <div className="mx-auto flex max-w-3xl items-end justify-between">
+    <AppShell pathname="/brands" greetingName={name}>
+      <div className="border-b border-[var(--line)] px-5 py-8 sm:px-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <Link href="/" className="text-sm text-[var(--paper-muted)] hover:text-[var(--paper)]">
-              ← Signalbrief
-            </Link>
-            <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl tracking-tight">
-              Brand monitoring
+            <h1 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[var(--ink)]">
+              Brands
             </h1>
-            <p className="mt-1 text-sm text-[var(--paper-muted)]">
-              Track mentions, keywords, and audience feedback across social and the web.
+            <p className="mt-1 text-sm text-[var(--fog)]">
+              Brand entities — health, mentions, keywords, and audience feedback.
             </p>
           </div>
           <div className="flex items-center gap-2">
             {brands.length > 0 && (
-              <RunMonitoringButton
-                label="Run all monitoring"
-                variant="outline"
-              />
+              <RunMonitoringButton label="Run all monitoring" variant="outline" />
             )}
             <Link
               href="/brands/new"
-              className="bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)] transition hover:opacity-90"
+              className="bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-[var(--paper)] transition hover:opacity-90"
             >
               Add brand
             </Link>
@@ -46,15 +43,15 @@ export default async function BrandsPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-5 py-10 sm:px-8">
+      <div className="px-5 py-10 sm:px-8">
         {brands.length === 0 ? (
           <div className="border border-[var(--line)] bg-white px-6 py-14 text-center">
             <p className="mb-2 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
               No brands yet
             </p>
             <p className="mb-6 text-sm text-[var(--fog)]">
-              Add your brand and we&apos;ll generate monitoring keywords, then scan social platforms
-              and the web for mentions every few hours.
+              Add your brand — AI will compile profile, socials, and keywords — then scan social and
+              the web for mentions.
             </p>
             <Link href="/brands/new" className="btn-primary inline-block">
               Add your first brand
@@ -84,6 +81,6 @@ export default async function BrandsPage() {
           </ul>
         )}
       </div>
-    </main>
+    </AppShell>
   );
 }

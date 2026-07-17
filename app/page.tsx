@@ -3,11 +3,16 @@ import { ReportView } from "@/components/ReportView";
 import { MOCK_REPORT } from "@/lib/mock-data";
 import { getUserCategoryPrefs } from "@/lib/prefs";
 import { getReportByDate, getTodayDateString } from "@/lib/reports";
+import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const user = await getUser();
+  if (user) redirect("/dashboard");
+
   const today = getTodayDateString();
   let report = await getReportByDate(today);
 
@@ -20,20 +25,28 @@ export default async function HomePage() {
       <main>
         <ReportHero
           reportDate={today}
-          summary="No live report yet. Showing setup state — run the daily ingest cron once credentials are configured, or browse the mock preview."
+          summary="Internet intelligence for marketers — sign in for your dashboard, or run ingest to populate today's public trends snapshot."
           trendCount={0}
         />
         <div className="mx-auto max-w-5xl px-5 py-16 text-center sm:px-8">
           <p className="mb-6 text-[var(--fog)]">
-            Connect Supabase + CreatorCrawl, then hit the ingest endpoint to generate today&apos;s
-            brief.
+            Sign in for My Dashboard, Morning Brief, and brand monitoring — or preview the trends
+            module.
           </p>
-          <Link
-            href="/preview"
-            className="inline-block bg-[var(--ink)] px-5 py-2.5 text-sm font-medium text-[var(--accent)] transition hover:opacity-90"
-          >
-            View mock preview
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/login"
+              className="inline-block bg-[var(--ink)] px-5 py-2.5 text-sm font-medium text-[var(--accent)] transition hover:opacity-90"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/preview"
+              className="inline-block border border-[var(--ink)] px-5 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--ink)] hover:text-[var(--paper)]"
+            >
+              View mock preview
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -48,7 +61,10 @@ export default async function HomePage() {
       />
       <ReportView report={report} categoryPrefs={await getUserCategoryPrefs()} />
       <footer className="border-t border-[var(--line)] py-8 text-center text-sm text-[var(--fog)]">
-        Signalbrief · Act early on short-form signals
+        Signalbrief ·{" "}
+        <Link href="/login" className="underline hover:text-[var(--ink)]">
+          Sign in for your dashboard
+        </Link>
       </footer>
     </main>
   );

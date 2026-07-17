@@ -1,5 +1,6 @@
 import type { Comment, CreatorCrawl, Post } from "@creatorcrawl/sdk";
 import { getCreatorCrawl, isCreatorCrawlConfigured } from "../creatorcrawl";
+import { linkMentionCreator } from "../entity-link";
 import { getSupabaseAdmin } from "../supabase";
 import { isOwnMention, websiteHost, type BrandSocialAccount } from "./own-account";
 import {
@@ -409,6 +410,27 @@ export async function runMentionsIngest(options?: {
         }
       }
     }
+
+    // Link a few social authors into the creator entity graph (cheap, best-effort)
+    const { data: recentSocial } = await supabase
+      .from("brand_mentions")
+      .select("id, author, platform")
+      .eq("brand_id", brand.id)
+      .eq("source", "social")
+      .is("entity_id", null)
+      .not("author", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    await Promise.allSettled(
+      (recentSocial ?? []).map((m) =>
+        linkMentionCreator({
+          mentionId: m.id as string,
+          author: m.author as string | null,
+          platform: m.platform as string | null,
+        }),
+      ),
+    );
 
     // Collapse historical duplicates (same post under different URL shapes)
     await collapseDuplicateMentions(supabase, brand.id);

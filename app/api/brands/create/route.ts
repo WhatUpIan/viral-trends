@@ -1,6 +1,7 @@
 import { SOCIAL_PLATFORMS, normalizeHandle } from "@/lib/mentions/own-account";
 import type { SocialPlatform } from "@/lib/mentions/own-account";
 import type { BrandMetadata } from "@/lib/brands";
+import { ensureBrandEntity, syncBrandGraph } from "@/lib/entities";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -92,6 +93,34 @@ export async function POST(request: Request) {
       handles.map((h) => ({ brand_id: brand.id, platform: h.platform, handle: h.handle })),
       { onConflict: "brand_id,platform" },
     );
+  }
+
+  try {
+    const entityId = await ensureBrandEntity(
+      {
+        id: brand.id,
+        name,
+        userId: user.id,
+        website,
+        description,
+        metadata: metadata as Record<string, unknown>,
+      },
+      supabase,
+    );
+    if (entityId) {
+      await syncBrandGraph(
+        entityId,
+        {
+          competitors: metadata.competitors,
+          products: metadata.products,
+          industry: metadata.industry,
+        },
+        { source: "brand_create" },
+        supabase,
+      );
+    }
+  } catch (err) {
+    console.warn("[brands] entity graph sync failed:", err);
   }
 
   return NextResponse.json({ ok: true, brandId: brand.id });
