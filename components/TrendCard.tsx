@@ -1,5 +1,7 @@
 import { formatNumber, platformLabel } from "@/lib/format";
+import { trendEntitySlug } from "@/lib/entities";
 import type { ReportTrend } from "@/lib/types";
+import Link from "next/link";
 import { ProxiedThumb } from "./ProxiedThumb";
 
 type Props = {
@@ -8,18 +10,20 @@ type Props = {
 };
 
 export function TrendCard({ trend, index }: Props) {
+  const dbHref = `/database/${trendEntitySlug(trend.platform, trend.externalId)}`;
+
   return (
     <article
       className="trend-card group"
       style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
     >
-      <a
-        href={trend.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex h-full flex-col"
-      >
-        <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--ink-muted)]">
+      <div className="flex h-full flex-col">
+        <a
+          href={trend.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--ink-muted)]"
+        >
           <ProxiedThumb
             src={trend.thumbnailUrl}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -28,7 +32,7 @@ export function TrendCard({ trend, index }: Props) {
           <span className="platform-badge absolute bottom-2 left-2">
             {platformLabel(trend.platform)}
           </span>
-        </div>
+        </a>
 
         <div className="flex flex-1 flex-col gap-1.5 p-3">
           <p className="text-[10px] uppercase tracking-wider text-[var(--fog)]">
@@ -36,7 +40,9 @@ export function TrendCard({ trend, index }: Props) {
           </p>
 
           <h3 className="line-clamp-2 font-[family-name:var(--font-display)] text-sm leading-snug text-[var(--ink)] sm:text-base">
-            {trend.title}
+            <Link href={dbHref} className="hover:underline">
+              {trend.title}
+            </Link>
           </h3>
 
           {trend.creatorHandle && (
@@ -57,8 +63,15 @@ export function TrendCard({ trend, index }: Props) {
               {trend.insight}
             </p>
           )}
+
+          <Link
+            href={dbHref}
+            className="pt-1 text-[11px] text-[var(--fog)] underline hover:text-[var(--ink)]"
+          >
+            Open in Trend Database
+          </Link>
         </div>
-      </a>
+      </div>
     </article>
   );
 }

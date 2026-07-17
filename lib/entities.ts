@@ -254,6 +254,126 @@ export async function listRelated(
     .filter((x): x is { entity: Entity; relation: string; weight: number } => x !== null);
 }
 
+/** Also load inbound edges (entities that point at this one). */
+export async function listRelatedBothWays(
+  entityId: string,
+  supabase?: SupabaseClient,
+): Promise<{ entity: Entity; relation: string; weight: number; direction: "out" | "in" }[]> {
+  const db = clientOrNull(supabase);
+  if (!db) return [];
+
+  const out = await listRelated(entityId, undefined, db);
+  const { data: inbound } = await db
+    .from("entity_edges")
+    .select("relation, weight, from_entity_id, entities:from_entity_id(*)")
+    .eq("to_entity_id", entityId);
+
+  const inboundMapped =
+    inbound?.map((row) => {
+      const raw = row.entities as unknown;
+      const ent =
+        raw && typeof raw === "object" && !Array.isArray(raw)
+          ? (raw as Record<string, unknown>)
+          : null;
+      if (!ent) return null;
+      return {
+        entity: mapEntity(ent),
+        relation: row.relation as string,
+        weight: Number(row.weight) || 1,
+        direction: "in" as const,
+      };
+    }).filter(
+      (x): x is { entity: Entity; relation: string; weight: number; direction: "in" } =>
+        x !== null,
+    ) ?? [];
+
+  return [
+    ...out.map((r) => ({ ...r, direction: "out" as const })),
+    ...inboundMapped,
+  ];
+}
+
+export async function listEntities(opts: {
+  type?: EntityType;
+  status?: EntityStatus;
+  limit?: number;
+  orderBy?: "updated" | "heat" | "name";
+}): Promise<Entity[]> {
+  const db = clientOrNull();
+  if (!db) return [];
+
+  let q = db.from("entities").select("*").limit(opts.limit ?? 60);
+
+  if (opts.type) q = q.eq("type", opts.type);
+  if (opts.status) q = q.eq("status", opts.status);
+
+  if (opts.orderBy === "name") {
+    q = q.order("name", { ascending: true });
+  } else if (opts.orderBy === "heat") {
+    // heat lives in metrics jsonb — fallback to updated_at
+    q = q.order("updated_at", { ascending: false });
+  } else {
+    q = q.order("updated_at", { ascending: false });
+  }
+
+  const { data, error } = await q;
+  if (error || !data) return [];
+
+  let entities = data.map(mapEntity);
+  if (opts.orderBy === "heat") {
+    entities = [...entities].sort(
+      (a, b) => (b.metrics.heat ?? b.metrics.views ?? 0) - (a.metrics.heat ?? a.metrics.views ?? 0),
+    );
+  }
+  return entities;
+}
+
+/** Simple ILIKE search across entity names (and optional type filter). */
+export async function searchEntities(
+  query: string,
+  opts?: { types?: EntityType[]; limit?: number },
+): Promise<Entity[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const db = clientOrNull();
+  if (!db) return [];
+
+  let req = db
+    .from("entities")
+    .select("*")
+    .ilike("name", `%${q}%`)
+    .limit(opts?.limit ?? 40)
+    .order("updated_at", { ascending: false });
+
+  if (opts?.types && opts.types.length === 1) {
+    req = req.eq("type", opts.types[0]);
+  }
+
+  const { data, error } = await req;
+  if (error || !data) return [];
+
+  let entities = data.map(mapEntity);
+  if (opts?.types && opts.types.length > 1) {
+    const allowed = new Set(opts.types);
+    entities = entities.filter((e) => allowed.has(e.type));
+  }
+  return entities;
+}
+
+export function entityHref(entity: Pick<Entity, "type" | "slug">): string {
+  if (entity.type === "brand") {
+    // Brand app routes use brand id; entity page still works as fallback
+    return `/entities/brand/${entity.slug}`;
+  }
+  if (entity.type === "trend") return `/database/${entity.slug}`;
+  return `/entities/${entity.type}/${entity.slug}`;
+}
+
+/** Match daily report item → permanent trend entity slug (same as ingest). */
+export function trendEntitySlug(platform: string, externalId: string): string {
+  return slugify(`${platform}-${externalId}`);
+}
+
 /**
  * Ensure a brand row has a linked brand entity. Returns entity id.
  */

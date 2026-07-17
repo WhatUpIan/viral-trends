@@ -52,8 +52,14 @@ Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `b
 
 - `/dashboard` — My Dashboard (KPIs, brand health, internet right now, alerts). Logged-in home.
 - `/brief` — AI Morning Brief (cached per user/day).
-- `/trends` — Daily viral trends report (categorized grid).
+- `/search` — Universal search across the entity graph + brands + today’s report.
+- `/trends` — Daily viral trends report (categorized grid). Cards link into the Trend Database.
+- `/database` — Permanent Trend Database + AI Q&A on each trend.
+- `/opportunities` — Opportunity Engine (white-space scores by industry).
 - `/brands` — Brand entities with health scores, mentions, feedback, AI setup.
+- `/competitors` — Competitor compare (mentions, sentiment, SOV estimate).
+- `/assistant` — AI assistant for brand health, complaints, and trend recommendations.
+- `/entities/[type]/[slug]` — Profile pages for creators, sounds, topics, companies, etc.
 - `/settings/categories` — Category order for the Trends module.
 
 ## User accounts & category priorities

@@ -3,14 +3,18 @@ import Link from "next/link";
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/brief", label: "Brief" },
+  { href: "/search", label: "Search" },
   { href: "/trends", label: "Trends" },
+  { href: "/database", label: "Database" },
+  { href: "/opportunities", label: "Opportunities" },
   { href: "/brands", label: "Brands" },
+  { href: "/competitors", label: "Competitors" },
+  { href: "/assistant", label: "Assistant" },
   { href: "/settings/categories", label: "Settings" },
 ] as const;
 
 type Props = {
   children: React.ReactNode;
-  /** Current path for active nav highlighting */
   pathname?: string;
   greetingName?: string | null;
 };
@@ -20,6 +24,8 @@ function isActive(pathname: string | undefined, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
   if (href === "/brands") return pathname.startsWith("/brands");
   if (href === "/trends") return pathname.startsWith("/trends") || pathname.startsWith("/report");
+  if (href === "/database")
+    return pathname.startsWith("/database") || pathname.startsWith("/entities");
   if (href === "/settings/categories") return pathname.startsWith("/settings");
   return pathname === href || pathname.startsWith(href + "/");
 }
@@ -46,7 +52,7 @@ export function AppShell({ children, pathname, greetingName }: Props) {
             </div>
           </div>
 
-          <nav className="mt-4 flex gap-1 overflow-x-auto lg:mt-8 lg:flex-col lg:overflow-visible">
+          <nav className="mt-4 flex gap-1 overflow-x-auto lg:mt-8 lg:flex-1 lg:flex-col lg:overflow-y-auto lg:overflow-x-visible">
             {NAV.map((item) => {
               const active = isActive(pathname, item.href);
               return (
@@ -65,7 +71,7 @@ export function AppShell({ children, pathname, greetingName }: Props) {
             })}
           </nav>
 
-          <div className="mt-4 flex items-center gap-3 lg:mt-auto lg:flex-col lg:items-stretch lg:pt-8">
+          <div className="mt-4 flex items-center gap-3 lg:mt-auto lg:flex-col lg:items-stretch lg:pt-6">
             {greetingName && (
               <p className="truncate text-xs text-[var(--paper-muted)] lg:px-3">{greetingName}</p>
             )}
