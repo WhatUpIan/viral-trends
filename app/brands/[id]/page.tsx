@@ -4,6 +4,9 @@ import {
   getBrandMentions,
   getMentionComments,
 } from "@/lib/brands";
+import { FeedbackList } from "@/components/FeedbackList";
+import { MentionsList } from "@/components/MentionsList";
+import { RunMonitoringButton } from "@/components/RunMonitoringButton";
 import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -14,8 +17,6 @@ import {
   regenerateKeywords,
   toggleBrandStatus,
 } from "../actions";
-import { MentionsList } from "@/components/MentionsList";
-import { FeedbackList } from "@/components/FeedbackList";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,8 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
                 {brand.status === "active" ? "Monitoring active" : "Monitoring paused"}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-start gap-2">
+              <RunMonitoringButton brandId={brand.id} label="Run monitoring" />
               <form action={toggleBrandStatus.bind(null, brand.id, brand.status)}>
                 <button
                   type="submit"

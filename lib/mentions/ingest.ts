@@ -183,7 +183,9 @@ async function fetchCommentsForMention(
   return [];
 }
 
-export async function runMentionsIngest(): Promise<MentionsIngestResult> {
+export async function runMentionsIngest(options?: {
+  brandIds?: string[];
+}): Promise<MentionsIngestResult> {
   const supabase = getSupabaseAdmin();
   if (!supabase) {
     return {
@@ -204,10 +206,14 @@ export async function runMentionsIngest(): Promise<MentionsIngestResult> {
     };
   }
 
-  const { data: brands, error: brandsError } = await supabase
-    .from("brands")
-    .select("id, name, status")
-    .eq("status", "active");
+  let query = supabase.from("brands").select("id, name, status");
+  if (options?.brandIds?.length) {
+    query = query.in("id", options.brandIds);
+  } else {
+    query = query.eq("status", "active");
+  }
+
+  const { data: brands, error: brandsError } = await query;
 
   if (brandsError) {
     return {

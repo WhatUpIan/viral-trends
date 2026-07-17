@@ -1,4 +1,5 @@
 import { listBrands } from "@/lib/brands";
+import { RunMonitoringButton } from "@/components/RunMonitoringButton";
 import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -28,12 +29,20 @@ export default async function BrandsPage() {
               Track mentions, keywords, and audience feedback across social and the web.
             </p>
           </div>
-          <Link
-            href="/brands/new"
-            className="bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)] transition hover:opacity-90"
-          >
-            Add brand
-          </Link>
+          <div className="flex items-center gap-2">
+            {brands.length > 0 && (
+              <RunMonitoringButton
+                label="Run all monitoring"
+                variant="outline"
+              />
+            )}
+            <Link
+              href="/brands/new"
+              className="bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)] transition hover:opacity-90"
+            >
+              Add brand
+            </Link>
+          </div>
         </div>
       </div>
 
