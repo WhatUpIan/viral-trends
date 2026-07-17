@@ -8,7 +8,7 @@ import Link from "next/link";
 type Props = {
   mentions: BrandMention[];
   brandId: string;
-  sourceFilter: "social" | "web" | null;
+  platformFilter: string | null;
   flagFilter: "highlighted" | "unviewed" | null;
 };
 
@@ -18,55 +18,60 @@ function sentimentBadge(sentiment: BrandMention["sentiment"]) {
   return <span className="text-xs text-[var(--fog)]">Neutral</span>;
 }
 
-export function MentionsList({ mentions, brandId, sourceFilter, flagFilter }: Props) {
-  let filtered = sourceFilter
-    ? mentions.filter((m) => m.source === sourceFilter)
+export function MentionsList({ mentions, brandId, platformFilter, flagFilter }: Props) {
+  let filtered = platformFilter
+    ? mentions.filter((m) => (m.platform ?? m.source) === platformFilter)
     : mentions;
   if (flagFilter === "highlighted") filtered = filtered.filter((m) => m.highlighted);
   if (flagFilter === "unviewed") filtered = filtered.filter((m) => !m.viewed);
 
-  const base = `/brands/${brandId}?tab=mentions`;
-  const withSource = sourceFilter ? `&source=${sourceFilter}` : "";
+  // Newest first (published, else discovered)
+  filtered = [...filtered].sort((a, b) => {
+    const ta = Date.parse(a.publishedAt ?? a.createdAt) || 0;
+    const tb = Date.parse(b.publishedAt ?? b.createdAt) || 0;
+    return tb - ta;
+  });
+
+  const base = `/brands/${brandId}`;
+  const withPlatform = platformFilter ? `&platform=${platformFilter}` : "";
   const withFlag = flagFilter ? `&flag=${flagFilter}` : "";
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        {[
-          { id: null, label: "All" },
-          { id: "social", label: "Social" },
-          { id: "web", label: "Web & news" },
-        ].map((f) => (
-          <Link
-            key={f.label}
-            href={`${base}${f.id ? `&source=${f.id}` : ""}${withFlag}`}
-            className={`filter-chip ${sourceFilter === f.id ? "filter-chip-active" : ""}`}
-          >
-            {f.label}
-          </Link>
-        ))}
-        <span className="mx-1 text-[var(--line)]">|</span>
-        {[
-          { id: "unviewed" as const, label: "Unviewed" },
-          { id: "highlighted" as const, label: "Highlighted" },
-        ].map((f) => (
-          <Link
-            key={f.id}
-            href={`${base}${withSource}${flagFilter === f.id ? "" : `&flag=${f.id}`}`}
-            className={`filter-chip ${flagFilter === f.id ? "filter-chip-active" : ""}`}
-          >
-            {f.label}
-          </Link>
-        ))}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+            {platformFilter
+              ? platformFilter.charAt(0).toUpperCase() + platformFilter.slice(1)
+              : "All platforms"}
+          </h2>
+          <p className="text-sm text-[var(--fog)]">
+            {filtered.length} mention{filtered.length === 1 ? "" : "s"} · newest first
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "unviewed" as const, label: "Unviewed" },
+            { id: "highlighted" as const, label: "Highlighted" },
+          ].map((f) => (
+            <Link
+              key={f.id}
+              href={`${base}?tab=mentions${withPlatform}${flagFilter === f.id ? "" : `&flag=${f.id}`}`}
+              className={`filter-chip ${flagFilter === f.id ? "filter-chip-active" : ""}`}
+            >
+              {f.label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {filtered.length === 0 ? (
         <div className="border border-[var(--line)] bg-white px-6 py-14 text-center">
           <p className="mb-2 text-[var(--ink)]">No mentions here</p>
           <p className="text-sm text-[var(--fog)]">
-            {flagFilter || sourceFilter
+            {flagFilter || platformFilter
               ? "Nothing matches these filters yet."
-              : "The monitor runs on a schedule, or use Run monitoring to scan now."}
+              : "Use Run monitoring to scan social and the web."}
           </p>
         </div>
       ) : (

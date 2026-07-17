@@ -3,7 +3,11 @@ export type WebResult = {
   title: string;
   snippet: string | null;
   publishedAt: string | null;
-  platform: "web" | "news";
+  platform: "web" | "news" | "youtube";
+  author?: string | null;
+  thumbnailUrl?: string | null;
+  metrics?: Record<string, number>;
+  externalId?: string | null;
 };
 
 /** SearchAPI.io (https://www.searchapi.io) — preferred. Also accepts legacy SERPAPI_API_KEY. */
@@ -17,7 +21,7 @@ function getApiKey(): string {
   return key;
 }
 
-async function searchApiFetch(
+export async function searchApiFetch(
   params: Record<string, string>,
 ): Promise<Record<string, unknown>> {
   const apiKey = getApiKey();
@@ -39,7 +43,6 @@ async function searchApiFetch(
 
 function parseDate(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  // Relative strings like "19 hours ago" aren't parseable as absolute dates
   if (/ago|hour|day|week|month|year|yesterday|today/i.test(value) && !/\d{4}/.test(value)) {
     return null;
   }
@@ -66,6 +69,16 @@ export async function searchWeb(
 ): Promise<WebResult[]> {
   const q = excludeDomain ? `${query} -site:${excludeDomain}` : query;
   const data = await searchApiFetch({ engine: "google", q, num: "10" });
+  return mapOrganic((data.organic_results ?? []) as Record<string, unknown>[], "web");
+}
+
+/** Bing web results — second web surface via SearchAPI. */
+export async function searchBing(
+  query: string,
+  excludeDomain?: string | null,
+): Promise<WebResult[]> {
+  const q = excludeDomain ? `${query} -site:${excludeDomain}` : query;
+  const data = await searchApiFetch({ engine: "bing", q });
   return mapOrganic((data.organic_results ?? []) as Record<string, unknown>[], "web");
 }
 
@@ -98,5 +111,81 @@ export async function searchNews(
   return [...byUrl.values()];
 }
 
-/** @deprecated Use isSearchApiConfigured — kept so old imports keep working during rename. */
+function youtubeThumb(id: string, thumb: unknown): string {
+  if (typeof thumb === "string" && thumb.startsWith("http")) return thumb;
+  if (thumb && typeof thumb === "object") {
+    const t = thumb as Record<string, unknown>;
+    if (typeof t.static === "string") return t.static;
+    if (typeof t.rich === "string") return t.rich;
+  }
+  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+}
+
+/**
+ * YouTube keyword search via SearchAPI (videos + Shorts sections).
+ * Complements CreatorCrawl YouTube for brand mention monitoring.
+ */
+export async function searchYouTube(query: string): Promise<WebResult[]> {
+  const data = await searchApiFetch({ engine: "youtube", q: query });
+  const out: WebResult[] = [];
+
+  const videos = (data.videos ?? []) as Record<string, unknown>[];
+  for (const v of videos.slice(0, 8)) {
+    if (typeof v.link !== "string" || typeof v.title !== "string") continue;
+    const id = typeof v.id === "string" ? v.id : null;
+    const channel = v.channel as Record<string, unknown> | undefined;
+    out.push({
+      url: v.link,
+      title: v.title,
+      snippet: typeof v.description === "string" ? v.description : null,
+      publishedAt: parseDate(v.published_time),
+      platform: "youtube",
+      author:
+        typeof channel?.title === "string"
+          ? channel.title
+          : typeof channel?.link === "string"
+            ? channel.link
+            : null,
+      thumbnailUrl: id ? youtubeThumb(id, v.thumbnail) : null,
+      externalId: id,
+      metrics: {
+        ...(typeof v.extracted_views === "number" ? { views: v.extracted_views } : {}),
+      },
+    });
+  }
+
+  const sections = (data.sections ?? []) as Record<string, unknown>[];
+  for (const section of sections) {
+    const name = String(section.section_name ?? section.section_title ?? "").toLowerCase();
+    if (!name.includes("short")) continue;
+    const items = (section.items ?? []) as Record<string, unknown>[];
+    for (const item of items.slice(0, 6)) {
+      if (typeof item.link !== "string" || typeof item.title !== "string") continue;
+      const id = typeof item.id === "string" ? item.id : null;
+      out.push({
+        url: item.link,
+        title: item.title,
+        snippet: null,
+        publishedAt: null,
+        platform: "youtube",
+        author: null,
+        thumbnailUrl:
+          typeof item.thumbnail === "string"
+            ? item.thumbnail
+            : id
+              ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+              : null,
+        externalId: id,
+      });
+    }
+  }
+
+  const byUrl = new Map<string, WebResult>();
+  for (const r of out) {
+    if (!byUrl.has(r.url)) byUrl.set(r.url, r);
+  }
+  return [...byUrl.values()];
+}
+
+/** @deprecated Use isSearchApiConfigured */
 export const isSerpApiConfigured = isSearchApiConfigured;

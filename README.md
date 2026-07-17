@@ -55,7 +55,7 @@ Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `b
 - `/brands` — add a brand (name, website, description). Keywords are auto-generated with OpenAI (heuristic fallback without a key).
 - **Custom keywords:** add product names, campaign hashtags, etc.
 - **Negative keywords:** mentions containing these are excluded.
-- `/api/cron/mentions` runs every 6 hours (see `vercel.json`): searches TikTok, YouTube, Instagram, and Reddit via CreatorCrawl plus Google web + News via SearchAPI.io, then pulls top comments from recent social mentions for feedback tracking.
+- `/api/cron/mentions` runs every 6 hours (see `vercel.json`): searches TikTok, YouTube, Instagram, and Reddit via CreatorCrawl plus Google, Bing, Google News, and YouTube via SearchAPI.io, then pulls top comments from recent social mentions for feedback tracking.
 - Trigger manually: `curl -X POST "https://YOUR_DOMAIN/api/cron/mentions" -H "Authorization: Bearer $CRON_SECRET"`
 
 **Credit note:** each brand uses up to 5 keywords × 4 social platforms per run (~20 CreatorCrawl calls) plus 2 SearchAPI calls per keyword, plus up to 5 comment fetches. Pause a brand from its detail page to stop its runs.

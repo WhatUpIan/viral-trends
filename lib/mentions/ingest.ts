@@ -2,7 +2,7 @@ import type { Comment, CreatorCrawl, Post } from "@creatorcrawl/sdk";
 import { getCreatorCrawl, isCreatorCrawlConfigured } from "../creatorcrawl";
 import { getSupabaseAdmin } from "../supabase";
 import { isOwnMention, websiteHost, type BrandSocialAccount } from "./own-account";
-import { isSearchApiConfigured, searchNews, searchWeb, type WebResult } from "./searchapi";
+import { isSearchApiConfigured, searchBing, searchNews, searchWeb, searchYouTube, type WebResult } from "./searchapi";
 
 /** Keep CreatorCrawl credit usage bounded per brand per run */
 const MAX_SEARCH_KEYWORDS = 5;
@@ -112,17 +112,18 @@ function postToMention(
 
 function webToMention(result: WebResult, brandId: string, keyword: string): MentionInsert {
   const text = `${result.title} ${result.snippet ?? ""}`;
+  const isYoutube = result.platform === "youtube";
   return {
     brand_id: brandId,
-    source: "web",
+    source: isYoutube ? "social" : "web",
     platform: result.platform,
-    external_id: null,
+    external_id: result.externalId ?? null,
     url: result.url,
     title: clean(result.title),
     snippet: clean(result.snippet),
     matched_keyword: keyword,
-    author: null,
-    metrics: {},
+    author: clean(result.author ?? null),
+    metrics: result.metrics ?? {},
     published_at: result.publishedAt,
     sentiment: heuristicSentiment(text),
   };
@@ -322,6 +323,15 @@ export async function runMentionsIngest(options?: {
                 console.warn(`[mentions] web search "${keyword}" failed:`, msg);
                 if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
               }),
+            searchBing(keyword, excludeDomain)
+              .then((results) => {
+                out.push(...results.map((r) => webToMention(r, brand.id, keyword)));
+              })
+              .catch((err: unknown) => {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.warn(`[mentions] bing search "${keyword}" failed:`, msg);
+                if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
+              }),
             searchNews(keyword, excludeDomain)
               .then((results) => {
                 out.push(...results.map((r) => webToMention(r, brand.id, keyword)));
@@ -329,6 +339,15 @@ export async function runMentionsIngest(options?: {
               .catch((err: unknown) => {
                 const msg = err instanceof Error ? err.message : String(err);
                 console.warn(`[mentions] news search "${keyword}" failed:`, msg);
+                if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
+              }),
+            searchYouTube(keyword)
+              .then((results) => {
+                out.push(...results.map((r) => webToMention(r, brand.id, keyword)));
+              })
+              .catch((err: unknown) => {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.warn(`[mentions] youtube search "${keyword}" failed:`, msg);
                 if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
               }),
           );

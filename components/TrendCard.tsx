@@ -1,5 +1,6 @@
 import { formatNumber, platformLabel } from "@/lib/format";
 import type { ReportTrend } from "@/lib/types";
+import { ProxiedThumb } from "./ProxiedThumb";
 
 type Props = {
   trend: ReportTrend;
@@ -19,18 +20,10 @@ export function TrendCard({ trend, index }: Props) {
         className="flex h-full flex-col"
       >
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--ink-muted)]">
-          {trend.thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={trend.thumbnailUrl}
-              alt=""
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-[var(--fog)]">
-              No thumb
-            </div>
-          )}
+          <ProxiedThumb
+            src={trend.thumbnailUrl}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
           <span className="heat-badge absolute left-2 top-2">{trend.heatScore}</span>
           <span className="platform-badge absolute bottom-2 left-2">
             {platformLabel(trend.platform)}

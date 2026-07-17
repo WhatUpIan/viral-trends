@@ -119,23 +119,29 @@ export async function getBrandMentions(
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    source: row.source,
-    platform: row.platform,
-    url: row.url,
-    title: row.title,
-    snippet: row.snippet,
-    matchedKeyword: row.matched_keyword,
-    author: row.author,
-    metrics: (row.metrics as Record<string, number>) ?? {},
-    publishedAt: row.published_at,
-    sentiment: row.sentiment,
-    createdAt: row.created_at,
-    viewed: Boolean(row.viewed),
-    responded: Boolean(row.responded),
-    highlighted: Boolean(row.highlighted),
-  }));
+  return (data ?? [])
+    .map((row) => ({
+      id: row.id,
+      source: row.source,
+      platform: row.platform,
+      url: row.url,
+      title: row.title,
+      snippet: row.snippet,
+      matchedKeyword: row.matched_keyword,
+      author: row.author,
+      metrics: (row.metrics as Record<string, number>) ?? {},
+      publishedAt: row.published_at,
+      sentiment: row.sentiment,
+      createdAt: row.created_at,
+      viewed: Boolean(row.viewed),
+      responded: Boolean(row.responded),
+      highlighted: Boolean(row.highlighted),
+    }))
+    .sort((a, b) => {
+      const ta = Date.parse(a.publishedAt ?? a.createdAt) || 0;
+      const tb = Date.parse(b.publishedAt ?? b.createdAt) || 0;
+      return tb - ta;
+    });
 }
 
 export async function getMentionComments(
@@ -152,24 +158,30 @@ export async function getMentionComments(
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  return (data ?? []).map((row) => {
-    const mention = row.brand_mentions as unknown as {
-      title: string | null;
-      url: string;
-    };
-    return {
-      id: row.id,
-      mentionId: row.mention_id,
-      author: row.author,
-      text: row.text,
-      likeCount: row.like_count,
-      publishedAt: row.published_at,
-      sentiment: row.sentiment,
-      viewed: Boolean(row.viewed),
-      responded: Boolean(row.responded),
-      highlighted: Boolean(row.highlighted),
-      mentionTitle: mention?.title ?? null,
-      mentionUrl: mention?.url ?? "",
-    };
-  });
+  return (data ?? [])
+    .map((row) => {
+      const mention = row.brand_mentions as unknown as {
+        title: string | null;
+        url: string;
+      };
+      return {
+        id: row.id,
+        mentionId: row.mention_id,
+        author: row.author,
+        text: row.text,
+        likeCount: row.like_count,
+        publishedAt: row.published_at,
+        sentiment: row.sentiment,
+        viewed: Boolean(row.viewed),
+        responded: Boolean(row.responded),
+        highlighted: Boolean(row.highlighted),
+        mentionTitle: mention?.title ?? null,
+        mentionUrl: mention?.url ?? "",
+      };
+    })
+    .sort((a, b) => {
+      const ta = Date.parse(a.publishedAt ?? "") || 0;
+      const tb = Date.parse(b.publishedAt ?? "") || 0;
+      return tb - ta;
+    });
 }

@@ -4,6 +4,7 @@ import {
   getBrandMentions,
   getBrandSocialAccounts,
   getMentionComments,
+  type BrandMention,
 } from "@/lib/brands";
 import { BrandSocialFields } from "@/components/BrandSocialFields";
 import { FeedbackList } from "@/components/FeedbackList";
@@ -26,14 +27,28 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; source?: string; flag?: string }>;
+  searchParams: Promise<{ tab?: string; platform?: string; flag?: string }>;
 };
 
-const TABS = [
-  { id: "mentions", label: "Mentions" },
-  { id: "feedback", label: "Feedback" },
-  { id: "profile", label: "Profile" },
+const PLATFORM_NAV = [
+  { id: null, label: "All platforms" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "YouTube" },
+  { id: "instagram", label: "Instagram" },
+  { id: "reddit", label: "Reddit" },
+  { id: "x", label: "X" },
+  { id: "web", label: "Web" },
+  { id: "news", label: "News" },
 ] as const;
+
+function countByPlatform(mentions: BrandMention[]) {
+  const counts = new Map<string, number>();
+  for (const m of mentions) {
+    const key = m.platform ?? m.source;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
 
 export default async function BrandDetailPage({ params, searchParams }: Props) {
   const user = await getUser();
@@ -43,86 +58,145 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
   const brand = await getBrand(id);
   if (!brand) notFound();
 
-  const { tab: rawTab, source, flag } = await searchParams;
-  const tab = TABS.some((t) => t.id === rawTab) ? rawTab : "mentions";
+  const { tab: rawTab, platform, flag } = await searchParams;
+  const tab =
+    rawTab === "feedback" || rawTab === "profile" || rawTab === "mentions"
+      ? rawTab
+      : "mentions";
+
+  const mentions = await getBrandMentions(id);
+  const platformCounts = countByPlatform(mentions);
+  const platformFilter =
+    PLATFORM_NAV.some((p) => p.id === platform) && platform ? platform : null;
 
   return (
-    <main className="min-h-screen">
-      <div className="border-b border-[var(--line)] bg-[var(--ink)] px-5 py-8 text-[var(--paper)] sm:px-8">
-        <div className="mx-auto max-w-4xl">
-          <Link href="/brands" className="text-sm text-[var(--paper-muted)] hover:text-[var(--paper)]">
-            ← Brands
-          </Link>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="font-[family-name:var(--font-display)] text-3xl tracking-tight">
-                {brand.name}
-              </h1>
-              <p className="mt-1 text-sm text-[var(--paper-muted)]">
-                {brand.website ?? "No website"} ·{" "}
-                {brand.status === "active" ? "Monitoring active" : "Monitoring paused"}
-              </p>
-            </div>
-            <div className="flex items-start gap-2">
-              <RunMonitoringButton brandId={brand.id} label="Run monitoring" />
-              <form action={toggleBrandStatus.bind(null, brand.id, brand.status)}>
-                <button
-                  type="submit"
-                  className="border border-[var(--paper-muted)] px-3 py-1.5 text-xs text-[var(--paper)] transition hover:border-[var(--paper)]"
-                >
-                  {brand.status === "active" ? "Pause" : "Resume"}
-                </button>
-              </form>
-              <form action={deleteBrand.bind(null, brand.id)}>
-                <button
-                  type="submit"
-                  className="border border-[var(--heat)] px-3 py-1.5 text-xs text-[var(--heat)] transition hover:bg-[var(--heat)] hover:text-white"
-                >
-                  Delete
-                </button>
-              </form>
-            </div>
+    <main className="min-h-screen bg-[var(--paper)]">
+      {/* Top bar */}
+      <header className="border-b border-[var(--line)] bg-[var(--ink)] text-[var(--paper)]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+          <div className="min-w-0">
+            <Link
+              href="/brands"
+              className="text-xs text-[var(--paper-muted)] transition hover:text-[var(--paper)]"
+            >
+              ← All brands
+            </Link>
+            <h1 className="truncate font-[family-name:var(--font-display)] text-2xl tracking-tight">
+              {brand.name}
+            </h1>
+            <p className="truncate text-xs text-[var(--paper-muted)]">
+              {brand.website ?? "No website"} ·{" "}
+              {brand.status === "active" ? "Monitoring active" : "Paused"}
+            </p>
           </div>
-
-          <nav className="mt-6 flex gap-1">
-            {TABS.map((t) => (
-              <Link
-                key={t.id}
-                href={`/brands/${brand.id}?tab=${t.id}`}
-                className={`px-4 py-2 text-sm transition ${
-                  tab === t.id
-                    ? "bg-[var(--paper)] font-semibold text-[var(--ink)]"
-                    : "text-[var(--paper-muted)] hover:text-[var(--paper)]"
-                }`}
+          <div className="flex shrink-0 items-start gap-2">
+            <RunMonitoringButton brandId={brand.id} label="Run monitoring" />
+            <form action={toggleBrandStatus.bind(null, brand.id, brand.status)}>
+              <button
+                type="submit"
+                className="border border-[var(--paper-muted)] px-3 py-1.5 text-xs text-[var(--paper)] transition hover:border-[var(--paper)]"
               >
-                {t.label}
-              </Link>
-            ))}
-          </nav>
+                {brand.status === "active" ? "Pause" : "Resume"}
+              </button>
+            </form>
+            <form action={deleteBrand.bind(null, brand.id)}>
+              <button
+                type="submit"
+                className="border border-[var(--heat)] px-3 py-1.5 text-xs text-[var(--heat)] transition hover:bg-[var(--heat)] hover:text-white"
+              >
+                Delete
+              </button>
+            </form>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="mx-auto max-w-4xl px-5 py-10 sm:px-8">
-        {tab === "mentions" && (
-          <MentionsList
-            mentions={await getBrandMentions(id)}
-            brandId={brand.id}
-            sourceFilter={source === "social" || source === "web" ? source : null}
-            flagFilter={flag === "highlighted" || flag === "unviewed" ? flag : null}
-          />
-        )}
+      <div className="mx-auto flex max-w-7xl flex-col gap-0 lg:flex-row">
+        {/* Side menu */}
+        <aside className="border-b border-[var(--line)] bg-white lg:w-56 lg:shrink-0 lg:border-b-0 lg:border-r">
+          <nav className="sticky top-0 flex gap-1 overflow-x-auto px-3 py-4 lg:flex-col lg:overflow-visible lg:px-3 lg:py-6">
+            <p className="mb-1 hidden px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--fog)] lg:block">
+              Mentions
+            </p>
+            {PLATFORM_NAV.map((p) => {
+              const href = p.id
+                ? `/brands/${brand.id}?tab=mentions&platform=${p.id}`
+                : `/brands/${brand.id}?tab=mentions`;
+              const active = tab === "mentions" && platformFilter === p.id;
+              const count = p.id ? (platformCounts.get(p.id) ?? 0) : mentions.length;
+              return (
+                <Link
+                  key={p.label}
+                  href={href}
+                  className={`flex items-center justify-between gap-2 whitespace-nowrap rounded-none px-3 py-2 text-sm transition ${
+                    active
+                      ? "bg-[var(--ink)] font-medium text-[var(--paper)]"
+                      : "text-[var(--ink-soft)] hover:bg-[var(--paper)] hover:text-[var(--ink)]"
+                  }`}
+                >
+                  <span>{p.label}</span>
+                  <span
+                    className={`tabular-nums text-[11px] ${
+                      active ? "text-[var(--paper-muted)]" : "text-[var(--fog)]"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </Link>
+              );
+            })}
 
-        {tab === "feedback" && (
-          <FeedbackList brandId={brand.id} comments={await getMentionComments(id)} />
-        )}
+            <div className="my-2 hidden h-px bg-[var(--line)] lg:block" />
 
-        {tab === "profile" && (
-          <ProfileTab
-            brand={brand}
-            keywords={await getBrandKeywords(id)}
-            socialAccounts={await getBrandSocialAccounts(id)}
-          />
-        )}
+            <p className="mb-1 hidden px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--fog)] lg:block">
+              Workspace
+            </p>
+            <Link
+              href={`/brands/${brand.id}?tab=feedback`}
+              className={`whitespace-nowrap px-3 py-2 text-sm transition ${
+                tab === "feedback"
+                  ? "bg-[var(--ink)] font-medium text-[var(--paper)]"
+                  : "text-[var(--ink-soft)] hover:bg-[var(--paper)] hover:text-[var(--ink)]"
+              }`}
+            >
+              Feedback
+            </Link>
+            <Link
+              href={`/brands/${brand.id}?tab=profile`}
+              className={`whitespace-nowrap px-3 py-2 text-sm transition ${
+                tab === "profile"
+                  ? "bg-[var(--ink)] font-medium text-[var(--paper)]"
+                  : "text-[var(--ink-soft)] hover:bg-[var(--paper)] hover:text-[var(--ink)]"
+              }`}
+            >
+              Brand profile
+            </Link>
+          </nav>
+        </aside>
+
+        {/* Main content */}
+        <div className="min-w-0 flex-1 px-5 py-8 sm:px-8">
+          {tab === "mentions" && (
+            <MentionsList
+              mentions={mentions}
+              brandId={brand.id}
+              platformFilter={platformFilter}
+              flagFilter={flag === "highlighted" || flag === "unviewed" ? flag : null}
+            />
+          )}
+
+          {tab === "feedback" && (
+            <FeedbackList brandId={brand.id} comments={await getMentionComments(id)} />
+          )}
+
+          {tab === "profile" && (
+            <ProfileTab
+              brand={brand}
+              keywords={await getBrandKeywords(id)}
+              socialAccounts={await getBrandSocialAccounts(id)}
+            />
+          )}
+        </div>
       </div>
     </main>
   );
@@ -142,12 +216,12 @@ async function ProfileTab({
   const negative = keywords.filter((k) => k.kind === "negative");
 
   return (
-    <div className="space-y-12">
+    <div className="mx-auto max-w-2xl space-y-12">
       <section>
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
           Brand details
         </h2>
-        <form action={updateBrand.bind(null, brand.id)} className="max-w-xl space-y-4">
+        <form action={updateBrand.bind(null, brand.id)} className="space-y-4">
           <div>
             <label htmlFor="name" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
               Brand name *
@@ -189,10 +263,9 @@ async function ProfileTab({
           Social accounts
         </h2>
         <p className="mb-4 text-sm text-[var(--fog)]">
-          Your official handles. Monitoring skips posts from these accounts and pages on your
-          website, so you only see what others say.
+          Official handles — monitoring skips your own posts and website pages.
         </p>
-        <form action={saveSocialAccounts.bind(null, brand.id)} className="max-w-2xl space-y-4">
+        <form action={saveSocialAccounts.bind(null, brand.id)} className="space-y-4">
           <BrandSocialFields accounts={socialAccounts} />
           <button type="submit" className="btn-primary">
             Save accounts
@@ -211,9 +284,6 @@ async function ProfileTab({
             </button>
           </form>
         </div>
-        <p className="mb-4 text-sm text-[var(--fog)]">
-          Auto-generated from your brand profile. Searched along with your custom keywords.
-        </p>
         <KeywordPills brandId={brand.id} keywords={generated} />
       </section>
 
@@ -221,9 +291,6 @@ async function ProfileTab({
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
           Custom keywords
         </h2>
-        <p className="mb-4 text-sm text-[var(--fog)]">
-          Product names, campaign hashtags, founder names — anything else worth tracking.
-        </p>
         <KeywordPills brandId={brand.id} keywords={custom} />
         <AddKeywordForm brandId={brand.id} kind="custom" placeholder="e.g. #acmesummer" />
       </section>
@@ -232,9 +299,6 @@ async function ProfileTab({
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
           Negative keywords
         </h2>
-        <p className="mb-4 text-sm text-[var(--fog)]">
-          Mentions containing these are excluded — use for unrelated meanings of your name.
-        </p>
         <KeywordPills brandId={brand.id} keywords={negative} negative />
         <AddKeywordForm brandId={brand.id} kind="negative" placeholder="e.g. acme looney tunes" />
       </section>
