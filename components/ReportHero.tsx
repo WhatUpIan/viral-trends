@@ -1,3 +1,4 @@
+import { AuthNav } from "@/components/AuthNav";
 import { formatReportDate } from "@/lib/format";
 import Link from "next/link";
 
@@ -19,13 +20,14 @@ export function ReportHero({ reportDate, summary, trendCount }: Props) {
           >
             Signalbrief
           </Link>
-          <div className="flex gap-5 text-[var(--paper-muted)]">
+          <div className="flex items-center gap-5 text-[var(--paper-muted)]">
             <Link href="/about" className="transition hover:text-[var(--paper)]">
               About
             </Link>
             <Link href="/archive" className="transition hover:text-[var(--paper)]">
               Archive
             </Link>
+            <AuthNav />
           </div>
         </nav>
 

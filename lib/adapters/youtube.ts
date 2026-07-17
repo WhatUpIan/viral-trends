@@ -15,7 +15,7 @@ export async function fetchYouTubeTrends(cc: CreatorCrawl): Promise<TrendItem[]>
         filter: "short",
       });
       return (search.data ?? [])
-        .slice(0, 4)
+        .slice(0, 6)
         .map((post) => postToTrendItem(post, "youtube", { categoryHint: category }))
         .filter((item): item is TrendItem => item !== null);
     },
@@ -37,5 +37,5 @@ export async function fetchYouTubeTrends(cc: CreatorCrawl): Promise<TrendItem[]>
     else console.warn("[youtube] fetch failed:", result.reason);
   }
 
-  return items.slice(0, 30);
+  return items.slice(0, 50);
 }

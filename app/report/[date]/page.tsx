@@ -1,5 +1,6 @@
 import { ReportHero } from "@/components/ReportHero";
 import { ReportView } from "@/components/ReportView";
+import { getUserCategoryPrefs } from "@/lib/prefs";
 import { getReportByDate } from "@/lib/reports";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -44,7 +45,7 @@ export default async function ReportDatePage({ params }: Props) {
         summary={report.summary}
         trendCount={report.trends.length}
       />
-      <ReportView report={report} />
+      <ReportView report={report} categoryPrefs={await getUserCategoryPrefs()} />
       <footer className="border-t border-[var(--line)] py-8 text-center text-sm text-[var(--fog)]">
         <Link href="/archive" className="underline underline-offset-4">
           Browse archive

@@ -63,7 +63,7 @@ export async function fetchTikTokTrends(cc: CreatorCrawl): Promise<TrendItem[]> 
         date_posted: "this_week",
       });
       return (res.data ?? [])
-        .slice(0, 4)
+        .slice(0, 6)
         .map((post) => postToTrendItem(post, "tiktok", { categoryHint: category }))
         .filter((item): item is TrendItem => item !== null);
     }),
@@ -73,7 +73,7 @@ export async function fetchTikTokTrends(cc: CreatorCrawl): Promise<TrendItem[]> 
     else console.warn("[tiktok] searchKeyword failed:", result.reason);
   }
 
-  return items.slice(0, 55);
+  return items.slice(0, 80);
 }
 
 export function isVideoPost(post: Post): boolean {

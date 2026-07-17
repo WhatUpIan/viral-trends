@@ -2,6 +2,8 @@
 
 Daily short-form viral report for **marketers and content creators**. Pulls signals from TikTok, YouTube Shorts, Instagram / Meta Reels, X, and Reddit via [CreatorCrawl](https://creatorcrawl.com), scores heat, categorizes trends, and publishes a categorized daily brief.
 
+Also includes **user accounts** (Supabase Auth), **per-user category priorities**, and **brand mention monitoring**: add a brand, get auto-generated keywords (plus custom and negative keywords), and track mentions across social platforms, Google, and Google News — including top comments for feedback tracking.
+
 ## Quick start
 
 ```bash
@@ -27,18 +29,36 @@ For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes (prod) | Anon key (read) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes (ingest) | Service role for cron writes |
 | `CREATORCRAWL_API_KEY` | Yes (ingest) | Third-party social data |
-| `OPENAI_API_KEY` | Optional | Category + insight blurbs |
+| `OPENAI_API_KEY` | Optional | Category + insight blurbs + brand keyword generation |
 | `OPENAI_MODEL` | Optional | Default `gpt-4o-mini` |
-| `CRON_SECRET` | Yes (ingest) | Auth for `/api/cron/ingest` |
+| `SERPAPI_API_KEY` | Optional | Web + Google News brand mentions ([serpapi.com](https://serpapi.com)) |
+| `CRON_SECRET` | Yes (ingest) | Auth for `/api/cron/ingest` and `/api/cron/mentions` |
 | `USE_MOCK_REPORT` | Optional | `true` to use mock data on `/` |
 
 ## Database setup
 
 1. Create a Supabase project.
-2. Run the SQL in [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql) in the SQL editor (or via Supabase CLI).
-3. Add URL + keys to `.env.local`.
+2. Run the SQL in [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql), then [`supabase/migrations/002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), in the SQL editor (or via Supabase CLI).
+3. In **Authentication → Providers**, make sure **Email** is enabled (it is by default). Optionally disable "Confirm email" for faster local testing.
+4. Add URL + keys to `.env.local`.
 
-Tables: `reports`, `trends`, `categories`.
+Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `brands`, `brand_keywords`, `brand_mentions`, `brand_mention_comments`.
+
+## User accounts & category priorities
+
+- `/signup` and `/login` — email + password via Supabase Auth.
+- `/settings/categories` — logged-in users can reorder categories and hide ones they don't care about; the daily report follows their order.
+- All user tables are protected with Row Level Security.
+
+## Brand mention monitoring
+
+- `/brands` — add a brand (name, website, description). Keywords are auto-generated with OpenAI (heuristic fallback without a key).
+- **Custom keywords:** add product names, campaign hashtags, etc.
+- **Negative keywords:** mentions containing these are excluded.
+- `/api/cron/mentions` runs every 6 hours (see `vercel.json`): searches TikTok, YouTube, Instagram, and Reddit via CreatorCrawl plus Google web + News via SerpAPI, then pulls top comments from recent social mentions for feedback tracking.
+- Trigger manually: `curl -X POST "https://YOUR_DOMAIN/api/cron/mentions" -H "Authorization: Bearer $CRON_SECRET"`
+
+**Credit note:** each brand uses up to 5 keywords × 4 social platforms per run (~20 CreatorCrawl calls) plus 2 SerpAPI calls per keyword, plus up to 5 comment fetches. Pause a brand from its detail page to stop its runs.
 
 ## CreatorCrawl credits
 
@@ -97,13 +117,14 @@ In **Project → Settings → Environment Variables**, add for Production (and P
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon/public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role (server only — never expose to client) |
-| `CREATORCRAWL_API_KEY` | Required for daily ingest |
+| `CREATORCRAWL_API_KEY` | Required for daily ingest + social mentions |
+| `SERPAPI_API_KEY` | Optional — web/news brand mentions |
 | `CRON_SECRET` | Long random string; Vercel Cron uses it automatically |
 | `OPENAI_API_KEY` | Optional |
 | `OPENAI_MODEL` | Optional (`gpt-4o-mini`) |
 | `USE_MOCK_REPORT` | Leave unset/`false` in production |
 
-Run the SQL in [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql) in Supabase before the first ingest.
+Run the SQL in [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql) and [`supabase/migrations/002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql) in Supabase before the first ingest.
 
 ### 4. Deploy
 
@@ -121,10 +142,11 @@ Or use **Deployments → … → Redeploy** after env vars are set, then hit the
 [`vercel.json`](vercel.json) schedules:
 
 ```
-0 10 * * *  →  GET /api/cron/ingest
+0 10 * * *    →  GET /api/cron/ingest     (daily trends report)
+0 */6 * * *   →  GET /api/cron/mentions   (brand mention monitor)
 ```
 
-(10:00 UTC daily.) When `CRON_SECRET` is set in the Vercel project, scheduled runs send `Authorization: Bearer <CRON_SECRET>`, which the route already checks.
+When `CRON_SECRET` is set in the Vercel project, scheduled runs send `Authorization: Bearer <CRON_SECRET>`, which both routes already check. Note: Hobby plan crons run at most once per day — the mentions cron will run daily there; upgrade to Pro for the 6-hour cadence.
 
 **Plan notes**
 

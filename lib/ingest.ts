@@ -10,8 +10,8 @@ import { scoreAndRank } from "./score";
 import { isSupabaseConfigured } from "./supabase";
 import type { Category, ClassifiedTrend } from "./types";
 
-const MAX_PER_CATEGORY = 5;
-const MAX_TOTAL = 36;
+const MAX_PER_CATEGORY = 10;
+const MAX_TOTAL = 80;
 
 /** Cap each category so one bucket (e.g. Sounds & Audio) can't flood the report. */
 function balanceCategories(trends: ClassifiedTrend[]): ClassifiedTrend[] {
@@ -64,10 +64,10 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
     const ranked = scoreAndRank(raw);
     const isSoundOrTag = (id: string) =>
       id.startsWith("song-") || id.startsWith("hashtag-");
-    const sounds = ranked.filter((t) => isSoundOrTag(t.externalId)).slice(0, 8);
+    const sounds = ranked.filter((t) => isSoundOrTag(t.externalId)).slice(0, 10);
     const rest = ranked
       .filter((t) => !isSoundOrTag(t.externalId))
-      .slice(0, 40 - sounds.length);
+      .slice(0, 70 - sounds.length);
     const scored = [...sounds, ...rest].sort((a, b) => b.heatScore - a.heatScore);
     const classified = balanceCategories(await classifyTrends(scored));
     const summary = await generateReportSummary(classified);

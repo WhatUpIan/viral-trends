@@ -1,6 +1,7 @@
 import { ReportHero } from "@/components/ReportHero";
 import { ReportView } from "@/components/ReportView";
 import { MOCK_REPORT } from "@/lib/mock-data";
+import { getUserCategoryPrefs } from "@/lib/prefs";
 import { getReportByDate, getTodayDateString } from "@/lib/reports";
 import Link from "next/link";
 
@@ -45,7 +46,7 @@ export default async function HomePage() {
         summary={report.summary}
         trendCount={report.trends.length}
       />
-      <ReportView report={report} />
+      <ReportView report={report} categoryPrefs={await getUserCategoryPrefs()} />
       <footer className="border-t border-[var(--line)] py-8 text-center text-sm text-[var(--fog)]">
         Signalbrief · Act early on short-form signals
       </footer>

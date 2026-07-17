@@ -49,7 +49,7 @@ export async function classifyTrends(scored: ScoredTrend[]): Promise<ClassifiedT
   }
 
   const openai = new OpenAI({ apiKey });
-  const batch = scored.slice(0, 40);
+  const batch = scored.slice(0, 70);
 
   const payload = batch.map((t, i) => ({
     i,

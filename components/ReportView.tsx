@@ -7,32 +7,49 @@ import { PlatformFilter } from "./PlatformFilter";
 import type { Category, DailyReport, Platform } from "@/lib/types";
 import { CATEGORIES } from "@/lib/types";
 
-type Props = {
-  report: DailyReport;
+type CategoryPrefInput = {
+  category: Category;
+  sortOrder: number;
+  enabled: boolean;
 };
 
-export function ReportView({ report }: Props) {
+type Props = {
+  report: DailyReport;
+  categoryPrefs?: CategoryPrefInput[] | null;
+};
+
+export function ReportView({ report, categoryPrefs }: Props) {
   const [platform, setPlatform] = useState<Platform | "all">("all");
   const [category, setCategory] = useState<Category | "all">("all");
 
+  const orderedCategories = useMemo<Category[]>(() => {
+    if (!categoryPrefs || categoryPrefs.length === 0) return [...CATEGORIES];
+    return [...categoryPrefs]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .filter((p) => p.enabled)
+      .map((p) => p.category);
+  }, [categoryPrefs]);
+
   const filtered = useMemo(() => {
+    const visible = new Set(orderedCategories);
     return report.trends.filter((t) => {
+      if (!visible.has(t.category)) return false;
       if (platform !== "all" && t.platform !== platform) return false;
       if (category !== "all" && t.category !== category) return false;
       return true;
     });
-  }, [report.trends, platform, category]);
+  }, [report.trends, platform, category, orderedCategories]);
 
   const byCategory = useMemo(() => {
     const map = new Map<Category, typeof filtered>();
-    for (const cat of CATEGORIES) {
+    for (const cat of orderedCategories) {
       const items = filtered
         .filter((t) => t.category === cat)
         .sort((a, b) => b.heatScore - a.heatScore);
       if (items.length) map.set(cat, items);
     }
     return map;
-  }, [filtered]);
+  }, [filtered, orderedCategories]);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">

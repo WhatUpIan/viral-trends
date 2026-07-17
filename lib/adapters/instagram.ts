@@ -11,7 +11,7 @@ export async function fetchInstagramMetaTrends(cc: CreatorCrawl): Promise<TrendI
     INSTAGRAM_CATEGORY_QUERIES.map(async ([category, query]) => {
       const res = await cc.instagram.searchReels({ query });
       const out: TrendItem[] = [];
-      (res.data ?? []).slice(0, 4).forEach((post, i) => {
+      (res.data ?? []).slice(0, 6).forEach((post, i) => {
         const ig = postToTrendItem(post, "instagram", { categoryHint: category });
         if (ig) out.push(ig);
         // Alternate half into the Meta Reels surface
@@ -32,5 +32,5 @@ export async function fetchInstagramMetaTrends(cc: CreatorCrawl): Promise<TrendI
     else console.warn("[instagram] searchReels failed:", result.reason);
   }
 
-  return items.slice(0, 30);
+  return items.slice(0, 45);
 }
