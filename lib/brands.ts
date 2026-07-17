@@ -4,11 +4,22 @@ import { commentDedupeKey, mentionContentKey, normalizeMentionUrl } from "@/lib/
 
 export type KeywordKind = "generated" | "custom" | "negative";
 
+export type BrandMetadata = {
+  industry?: string;
+  products?: string[];
+  competitors?: string[];
+  tagline?: string;
+  targetAudience?: string;
+  headquarters?: string;
+  notes?: string;
+};
+
 export type Brand = {
   id: string;
   name: string;
   website: string | null;
   description: string | null;
+  metadata: BrandMetadata;
   status: "active" | "paused";
   createdAt: string;
 };
@@ -51,11 +62,17 @@ export type MentionComment = {
 };
 
 function toBrand(row: Record<string, unknown>): Brand {
+  const rawMeta = row.metadata;
+  const metadata: BrandMetadata =
+    rawMeta && typeof rawMeta === "object" && !Array.isArray(rawMeta)
+      ? (rawMeta as BrandMetadata)
+      : {};
   return {
     id: row.id as string,
     name: row.name as string,
     website: (row.website as string) ?? null,
     description: (row.description as string) ?? null,
+    metadata,
     status: row.status as Brand["status"],
     createdAt: row.created_at as string,
   };

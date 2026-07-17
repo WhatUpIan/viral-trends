@@ -47,7 +47,7 @@ export async function generateBrandKeywords(brand: BrandInput): Promise<string[]
         {
           role: "system",
           content: `You generate search keywords for monitoring brand mentions across social media and the web.
-Return JSON: { "keywords": string[] } with 8-15 entries.
+Return JSON: { "keywords": string[] } with 18-20 entries.
 Include: the exact brand name, common misspellings or shorthand people actually use, product names if inferable, the brand hashtag, and 2-3 "brand + intent" phrases (e.g. "<brand> review", "<brand> vs"). Keywords should be short search phrases, not sentences. No duplicates. No generic industry terms that would match unrelated content.`,
         },
         {
@@ -71,7 +71,7 @@ Include: the exact brand name, common misspellings or shorthand people actually 
       : [];
 
     if (keywords.length === 0) return heuristicKeywords(brand);
-    return [...new Set([brand.name.trim(), ...keywords])].slice(0, 15);
+    return [...new Set([brand.name.trim(), ...keywords])].slice(0, 20);
   } catch (err) {
     console.warn("[keyword-gen] OpenAI failed, using heuristics:", err);
     return heuristicKeywords(brand);

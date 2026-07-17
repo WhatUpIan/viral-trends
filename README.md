@@ -38,7 +38,7 @@ For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the
 ## Database setup
 
 1. Create a Supabase project.
-2. Run the SQL migrations in order in the SQL editor (or via Supabase CLI): [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), [`003_brand_social_accounts.sql`](supabase/migrations/003_brand_social_accounts.sql), [`004_mention_workflow.sql`](supabase/migrations/004_mention_workflow.sql).
+2. Run the SQL migrations in order in the SQL editor (or via Supabase CLI): [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), [`003_brand_social_accounts.sql`](supabase/migrations/003_brand_social_accounts.sql), [`004_mention_workflow.sql`](supabase/migrations/004_mention_workflow.sql), [`005_brand_metadata.sql`](supabase/migrations/005_brand_metadata.sql).
 3. In **Authentication → Providers**, make sure **Email** is enabled (it is by default). Optionally disable "Confirm email" for faster local testing.
 4. Add URL + keys to `.env.local`.
 
@@ -52,7 +52,7 @@ Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `b
 
 ## Brand mention monitoring
 
-- `/brands` — add a brand (name, website, description). Keywords are auto-generated with OpenAI (heuristic fallback without a key).
+- `/brands` — add a brand with **AI setup**: enter name + website URL; we fetch the homepage, search the web (SearchAPI.io when configured), and compile description, social handles, 20 monitoring keywords, negative keywords, and brand intelligence (industry, products, competitors). Review and edit before saving.
 - **Custom keywords:** add product names, campaign hashtags, etc.
 - **Negative keywords:** mentions containing these are excluded.
 - `/api/cron/mentions` runs every 6 hours (see `vercel.json`): searches TikTok, YouTube, Instagram, and Reddit via CreatorCrawl plus Google, Bing, Google News, and YouTube via SearchAPI.io, then pulls top comments from recent social mentions for feedback tracking.

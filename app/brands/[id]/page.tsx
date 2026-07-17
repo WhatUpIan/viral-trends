@@ -258,6 +258,58 @@ async function ProfileTab({
         </form>
       </section>
 
+      {Object.keys(brand.metadata).length > 0 && (
+        <section>
+          <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+            Brand intelligence
+          </h2>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            {brand.metadata.industry && (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-[var(--fog)]">Industry</dt>
+                <dd>{brand.metadata.industry}</dd>
+              </div>
+            )}
+            {brand.metadata.tagline && (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-[var(--fog)]">Tagline</dt>
+                <dd>{brand.metadata.tagline}</dd>
+              </div>
+            )}
+            {brand.metadata.targetAudience && (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-[var(--fog)]">Audience</dt>
+                <dd>{brand.metadata.targetAudience}</dd>
+              </div>
+            )}
+            {brand.metadata.headquarters && (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-[var(--fog)]">Headquarters</dt>
+                <dd>{brand.metadata.headquarters}</dd>
+              </div>
+            )}
+            {(brand.metadata.products?.length ?? 0) > 0 && (
+              <div className="sm:col-span-2">
+                <dt className="text-xs uppercase tracking-wide text-[var(--fog)]">Products</dt>
+                <dd>{brand.metadata.products?.join(" · ")}</dd>
+              </div>
+            )}
+            {(brand.metadata.competitors?.length ?? 0) > 0 && (
+              <div className="sm:col-span-2">
+                <dt className="text-xs uppercase tracking-wide text-[var(--fog)]">Competitors</dt>
+                <dd>{brand.metadata.competitors?.join(" · ")}</dd>
+              </div>
+            )}
+            {brand.metadata.notes && (
+              <div className="sm:col-span-2">
+                <dt className="text-xs uppercase tracking-wide text-[var(--fog)]">Notes</dt>
+                <dd>{brand.metadata.notes}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
+
       <section>
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
           Social accounts

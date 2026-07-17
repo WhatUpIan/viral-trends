@@ -1,20 +1,13 @@
 import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BrandSocialFields } from "@/components/BrandSocialFields";
-import { createBrand } from "../actions";
+import { BrandSetupForm } from "@/components/BrandSetupForm";
 
 export const metadata = { title: "Add brand — Signalbrief" };
 
-type Props = {
-  searchParams: Promise<{ error?: string }>;
-};
-
-export default async function NewBrandPage({ searchParams }: Props) {
+export default async function NewBrandPage() {
   const user = await getUser();
   if (!user) redirect("/login?next=/brands/new");
-
-  const { error } = await searchParams;
 
   return (
     <main className="min-h-screen">
@@ -27,55 +20,13 @@ export default async function NewBrandPage({ searchParams }: Props) {
             Add a brand
           </h1>
           <p className="mt-1 text-sm text-[var(--paper-muted)]">
-            We&apos;ll generate monitoring keywords automatically — you can edit them after.
+            Enter your brand name and website — AI will compile your profile, social handles, and 20 monitoring keywords.
           </p>
         </div>
       </div>
 
       <div className="mx-auto max-w-xl px-5 py-10 sm:px-8">
-        {error && (
-          <p className="mb-4 border border-[var(--heat)] px-4 py-2 text-sm text-[var(--heat)]">
-            {error === "name_required" ? "Brand name is required." : "Something went wrong — try again."}
-          </p>
-        )}
-
-        <form action={createBrand} className="space-y-5">
-          <div>
-            <label htmlFor="name" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
-              Brand name *
-            </label>
-            <input id="name" name="name" required className="auth-input" placeholder="Acme Coffee" />
-          </div>
-
-          <div>
-            <label htmlFor="website" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
-              Website
-            </label>
-            <input id="website" name="website" className="auth-input" placeholder="acmecoffee.com" />
-          </div>
-
-          <div>
-            <label htmlFor="description" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
-              What does this brand do?
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows={3}
-              className="auth-input resize-y"
-              placeholder="Cold brew coffee brand sold DTC and in grocery stores…"
-            />
-            <p className="mt-1 text-xs text-[var(--fog)]">
-              Used to generate better monitoring keywords.
-            </p>
-          </div>
-
-          <BrandSocialFields />
-
-          <button type="submit" className="btn-primary">
-            Create brand &amp; generate keywords
-          </button>
-        </form>
+        <BrandSetupForm />
       </div>
     </main>
   );
