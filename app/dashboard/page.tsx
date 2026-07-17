@@ -1,4 +1,6 @@
 import { AppShell } from "@/components/AppShell";
+import { RunIngestButton } from "@/components/RunIngestButton";
+import { isAdminEmail } from "@/lib/admin";
 import { getDashboardData } from "@/lib/dashboard";
 import { getGreetingName, timeOfDayGreeting } from "@/lib/greeting";
 import { getUser } from "@/lib/supabase/server";
@@ -66,19 +68,22 @@ export default async function DashboardPage() {
   return (
     <AppShell pathname="/dashboard" greetingName={name}>
       <div className="px-5 py-8 sm:px-8">
-        <header className="mb-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--fog)]">
-            My Dashboard
-          </p>
-          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl tracking-tight text-[var(--ink)]">
-            {greeting}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--fog)]">
-            Internet intelligence across brands, mentions, and viral signals.{" "}
-            <Link href="/brief" className="underline hover:text-[var(--ink)]">
-              Read morning brief
-            </Link>
-          </p>
+        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--fog)]">
+              My Dashboard
+            </p>
+            <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl tracking-tight text-[var(--ink)]">
+              {greeting}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--fog)]">
+              Internet intelligence across brands, mentions, and viral signals.{" "}
+              <Link href="/brief" className="underline hover:text-[var(--ink)]">
+                Read morning brief
+              </Link>
+            </p>
+          </div>
+          {isAdminEmail(user.email) && <RunIngestButton variant="primary" />}
         </header>
 
         {/* KPI strip */}
