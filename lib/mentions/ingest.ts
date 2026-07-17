@@ -1,6 +1,7 @@
 import type { Comment, CreatorCrawl, Post } from "@creatorcrawl/sdk";
 import { getCreatorCrawl, isCreatorCrawlConfigured } from "../creatorcrawl";
 import { getSupabaseAdmin } from "../supabase";
+import { isOwnMention, websiteHost, type BrandSocialAccount } from "./own-account";
 import { isSerpApiConfigured, searchNews, searchWeb, type WebResult } from "./serpapi";
 
 /** Keep CreatorCrawl credit usage bounded per brand per run */
@@ -13,6 +14,7 @@ type BrandRow = {
   id: string;
   name: string;
   status: string;
+  website: string | null;
 };
 
 type KeywordRow = {
@@ -41,6 +43,8 @@ export type MentionsIngestResult = {
   brandsProcessed: number;
   mentionsUpserted: number;
   commentsUpserted: number;
+  skippedOwn?: number;
+  byPlatform?: Record<string, number>;
   error?: string;
 };
 
@@ -138,14 +142,18 @@ async function searchSocial(
     [
       "youtube",
       cc.youtube
-        .search({ query: keyword, uploadDate: "week", sortBy: "relevance" })
+        .search({
+          query: keyword,
+          uploadDate: "month",
+          sortBy: "relevance",
+        })
         .then((r) => r.data ?? []),
     ],
     ["instagram", cc.instagram.searchReels({ query: keyword }).then((r) => r.data ?? [])],
     [
       "reddit",
       cc.reddit
-        .search({ query: keyword, sort: "new", timeframe: "week" })
+        .search({ query: keyword, sort: "relevance", timeframe: "month" })
         .then((r) => r.data ?? []),
     ],
   ];
@@ -206,7 +214,7 @@ export async function runMentionsIngest(options?: {
     };
   }
 
-  let query = supabase.from("brands").select("id, name, status");
+  let query = supabase.from("brands").select("id, name, status, website");
   if (options?.brandIds?.length) {
     query = query.in("id", options.brandIds);
   } else {
@@ -238,6 +246,14 @@ export async function runMentionsIngest(options?: {
       activeBrands.map((b) => b.id),
     );
 
+  const { data: accountRows } = await supabase
+    .from("brand_social_accounts")
+    .select("brand_id, platform, handle")
+    .in(
+      "brand_id",
+      activeBrands.map((b) => b.id),
+    );
+
   const keywordsByBrand = new Map<string, KeywordRow[]>();
   for (const row of (keywordRows ?? []) as KeywordRow[]) {
     const list = keywordsByBrand.get(row.brand_id) ?? [];
@@ -245,12 +261,26 @@ export async function runMentionsIngest(options?: {
     keywordsByBrand.set(row.brand_id, list);
   }
 
+  const accountsByBrand = new Map<string, BrandSocialAccount[]>();
+  for (const row of accountRows ?? []) {
+    const list = accountsByBrand.get(row.brand_id) ?? [];
+    list.push({
+      platform: row.platform as BrandSocialAccount["platform"],
+      handle: row.handle as string,
+    });
+    accountsByBrand.set(row.brand_id, list);
+  }
+
   const cc = isCreatorCrawlConfigured() ? getCreatorCrawl() : null;
   let mentionsUpserted = 0;
   let commentsUpserted = 0;
+  let skippedOwn = 0;
+  const byPlatform: Record<string, number> = {};
 
   for (const brand of activeBrands) {
     const rows = keywordsByBrand.get(brand.id) ?? [];
+    const socialAccounts = accountsByBrand.get(brand.id) ?? [];
+    const excludeDomain = websiteHost(brand.website);
     const negatives = rows.filter((r) => r.kind === "negative").map((r) => r.keyword);
     // Custom keywords take priority over generated ones within the search budget
     const searchKeywords = [
@@ -270,8 +300,8 @@ export async function runMentionsIngest(options?: {
       }
       if (isSerpApiConfigured()) {
         const [web, news] = await Promise.allSettled([
-          searchWeb(keyword),
-          searchNews(keyword),
+          searchWeb(keyword, excludeDomain),
+          searchNews(keyword, excludeDomain),
         ]);
         if (web.status === "fulfilled") {
           mentions.push(...web.value.map((r) => webToMention(r, brand.id, keyword)));
@@ -282,19 +312,14 @@ export async function runMentionsIngest(options?: {
       }
     }
 
-    // Require the brand/keyword to actually appear for social posts (search results
-    // can be loose) and drop anything matching a negative keyword.
-    const brandLower = brand.name.toLowerCase();
+    // Drop negative keywords and posts from the brand's own official accounts.
+    // Social search results already matched the keyword query — no extra caption check.
     const filtered = mentions.filter((m) => {
       const text = `${m.title ?? ""} ${m.snippet ?? ""} ${m.author ?? ""}`;
       if (matchesNegative(text, negatives)) return false;
-      if (m.source === "social") {
-        const lower = text.toLowerCase();
-        return (
-          lower.includes(brandLower) ||
-          (m.matched_keyword != null &&
-            lower.includes(m.matched_keyword.toLowerCase()))
-        );
+      if (isOwnMention(m, socialAccounts, brand.website)) {
+        skippedOwn++;
+        return false;
       }
       return true;
     });
@@ -315,6 +340,10 @@ export async function runMentionsIngest(options?: {
         console.warn(`[mentions] upsert failed for brand ${brand.name}:`, error.message);
       } else {
         mentionsUpserted += batch.length;
+        for (const m of batch) {
+          const key = m.platform ?? m.source;
+          byPlatform[key] = (byPlatform[key] ?? 0) + 1;
+        }
       }
     }
 
@@ -352,6 +381,32 @@ export async function runMentionsIngest(options?: {
         }
       }
     }
+
+    // Remove any previously stored mentions from the brand's own accounts
+    const { data: stored } = await supabase
+      .from("brand_mentions")
+      .select("id, source, platform, url, author")
+      .eq("brand_id", brand.id);
+
+    const ownIds = (stored ?? [])
+      .filter((m) =>
+        isOwnMention(
+          {
+            source: m.source as "social" | "web",
+            platform: m.platform as string | null,
+            url: m.url as string,
+            author: m.author as string | null,
+          },
+          socialAccounts,
+          brand.website,
+        ),
+      )
+      .map((m) => m.id as string);
+
+    if (ownIds.length > 0) {
+      await supabase.from("brand_mentions").delete().in("id", ownIds);
+      skippedOwn += ownIds.length;
+    }
   }
 
   return {
@@ -359,5 +414,7 @@ export async function runMentionsIngest(options?: {
     brandsProcessed: activeBrands.length,
     mentionsUpserted,
     commentsUpserted,
+    skippedOwn,
+    byPlatform,
   };
 }

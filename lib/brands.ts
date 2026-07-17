@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { BrandSocialAccount, SocialPlatform } from "@/lib/mentions/own-account";
 
 export type KeywordKind = "generated" | "custom" | "negative";
 
@@ -73,6 +74,19 @@ export async function getBrand(id: string): Promise<Brand | null> {
   const supabase = await createClient();
   const { data } = await supabase.from("brands").select("*").eq("id", id).maybeSingle();
   return data ? toBrand(data) : null;
+}
+
+export async function getBrandSocialAccounts(brandId: string): Promise<BrandSocialAccount[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("brand_social_accounts")
+    .select("platform, handle")
+    .eq("brand_id", brandId)
+    .order("platform", { ascending: true });
+  return (data ?? []).map((row) => ({
+    platform: row.platform as SocialPlatform,
+    handle: row.handle as string,
+  }));
 }
 
 export async function getBrandKeywords(brandId: string): Promise<BrandKeyword[]> {

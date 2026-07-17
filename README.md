@@ -38,7 +38,7 @@ For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the
 ## Database setup
 
 1. Create a Supabase project.
-2. Run the SQL in [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql), then [`supabase/migrations/002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), in the SQL editor (or via Supabase CLI).
+2. Run the SQL in [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql), then [`002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), then [`003_brand_social_accounts.sql`](supabase/migrations/003_brand_social_accounts.sql), in the SQL editor (or via Supabase CLI).
 3. In **Authentication → Providers**, make sure **Email** is enabled (it is by default). Optionally disable "Confirm email" for faster local testing.
 4. Add URL + keys to `.env.local`.
 

@@ -34,6 +34,8 @@ export function RunMonitoringButton({
         mentionsUpserted?: number;
         commentsUpserted?: number;
         brandsProcessed?: number;
+        skippedOwn?: number;
+        byPlatform?: Record<string, number>;
       };
 
       if (!res.ok || !data.ok) {
@@ -42,9 +44,17 @@ export function RunMonitoringButton({
         return;
       }
 
+      const platformBits = data.byPlatform
+        ? Object.entries(data.byPlatform)
+            .map(([p, n]) => `${p}: ${n}`)
+            .join(", ")
+        : "";
+
       setMessage(
         `Found ${data.mentionsUpserted ?? 0} mentions` +
           (data.commentsUpserted ? `, ${data.commentsUpserted} comments` : "") +
+          (data.skippedOwn ? ` (${data.skippedOwn} own posts skipped)` : "") +
+          (platformBits ? `. ${platformBits}` : "") +
           ".",
       );
       router.refresh();

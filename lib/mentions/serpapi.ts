@@ -36,9 +36,13 @@ function parseDate(value: unknown): string | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-/** Google web results for a keyword. */
-export async function searchWeb(query: string): Promise<WebResult[]> {
-  const data = await serpFetch({ engine: "google", q: query, num: "10" });
+/** Google web results for a keyword. Optionally exclude the brand's own domain. */
+export async function searchWeb(
+  query: string,
+  excludeDomain?: string | null,
+): Promise<WebResult[]> {
+  const q = excludeDomain ? `${query} -site:${excludeDomain}` : query;
+  const data = await serpFetch({ engine: "google", q, num: "10" });
   const organic = (data?.organic_results ?? []) as Record<string, unknown>[];
   return organic
     .filter((r) => typeof r.link === "string" && typeof r.title === "string")
@@ -51,9 +55,13 @@ export async function searchWeb(query: string): Promise<WebResult[]> {
     }));
 }
 
-/** Google News results for a keyword. */
-export async function searchNews(query: string): Promise<WebResult[]> {
-  const data = await serpFetch({ engine: "google_news", q: query });
+/** Google News results for a keyword. Optionally exclude the brand's own domain. */
+export async function searchNews(
+  query: string,
+  excludeDomain?: string | null,
+): Promise<WebResult[]> {
+  const q = excludeDomain ? `${query} -site:${excludeDomain}` : query;
+  const data = await serpFetch({ engine: "google_news", q });
   const news = (data?.news_results ?? []) as Record<string, unknown>[];
   return news
     .filter((r) => typeof r.link === "string" && typeof r.title === "string")

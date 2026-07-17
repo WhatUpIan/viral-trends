@@ -1,6 +1,7 @@
 import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BrandSocialFields } from "@/components/BrandSocialFields";
 import { createBrand } from "../actions";
 
 export const metadata = { title: "Add brand — Signalbrief" };
@@ -68,6 +69,8 @@ export default async function NewBrandPage({ searchParams }: Props) {
               Used to generate better monitoring keywords.
             </p>
           </div>
+
+          <BrandSocialFields />
 
           <button type="submit" className="btn-primary">
             Create brand &amp; generate keywords

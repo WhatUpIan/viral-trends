@@ -2,8 +2,10 @@ import {
   getBrand,
   getBrandKeywords,
   getBrandMentions,
+  getBrandSocialAccounts,
   getMentionComments,
 } from "@/lib/brands";
+import { BrandSocialFields } from "@/components/BrandSocialFields";
 import { FeedbackList } from "@/components/FeedbackList";
 import { MentionsList } from "@/components/MentionsList";
 import { RunMonitoringButton } from "@/components/RunMonitoringButton";
@@ -15,6 +17,7 @@ import {
   deleteBrand,
   deleteKeyword,
   regenerateKeywords,
+  saveSocialAccounts,
   toggleBrandStatus,
 } from "../actions";
 
@@ -28,6 +31,7 @@ type Props = {
 const TABS = [
   { id: "mentions", label: "Mentions" },
   { id: "keywords", label: "Keywords" },
+  { id: "accounts", label: "Accounts" },
   { id: "feedback", label: "Feedback" },
 ] as const;
 
@@ -43,6 +47,7 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
   const tab = TABS.some((t) => t.id === rawTab) ? rawTab : "mentions";
 
   const keywords = await getBrandKeywords(id);
+  const socialAccounts = await getBrandSocialAccounts(id);
   const generated = keywords.filter((k) => k.kind === "generated");
   const custom = keywords.filter((k) => k.kind === "custom");
   const negative = keywords.filter((k) => k.kind === "negative");
@@ -157,6 +162,21 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
         )}
 
         {tab === "feedback" && <FeedbackList comments={await getMentionComments(id)} />}
+
+        {tab === "accounts" && (
+          <div>
+            <p className="mb-4 text-sm text-[var(--fog)]">
+              Add your official handles on each platform. Monitoring will skip your own posts and
+              pages on your website.
+            </p>
+            <form action={saveSocialAccounts.bind(null, brand.id)} className="space-y-4">
+              <BrandSocialFields accounts={socialAccounts} />
+              <button type="submit" className="btn-primary">
+                Save accounts
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </main>
   );
