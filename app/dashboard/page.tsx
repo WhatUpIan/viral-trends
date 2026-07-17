@@ -101,7 +101,7 @@ export default async function DashboardPage() {
           <Kpi
             label="Trending Opportunities"
             value={data.kpis.trendingOpportunities}
-            hint="Heat ≥ 70"
+            hint="Your industry white space"
           />
           <Kpi label="High Risk Alerts" value={data.kpis.highRiskAlerts} />
           <Kpi label="New Viral Trends" value={data.kpis.newViralTrends} />

@@ -191,6 +191,14 @@ export async function getDashboardData(): Promise<DashboardData> {
   }).length;
 
   const trendingOpportunities = trends.filter((t) => t.heatScore >= 70).length;
+  let industryOpportunities = trendingOpportunities;
+  try {
+    const { countUserIndustryOpportunities } = await import("@/lib/opportunity");
+    const n = await countUserIndustryOpportunities();
+    if (n > 0) industryOpportunities = n;
+  } catch {
+    // keep heat-based fallback
+  }
 
   const alerts: DashboardData["alerts"] = [];
 
@@ -255,7 +263,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       brandHealth,
       mentionsToday,
       unread,
-      trendingOpportunities,
+      trendingOpportunities: industryOpportunities,
       highRiskAlerts: highRisk.length,
       competitorsMentioned,
       newViralTrends: trends.length,

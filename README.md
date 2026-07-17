@@ -42,11 +42,11 @@ For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the
 ## Database setup
 
 1. Create a Supabase project.
-2. Run the SQL migrations in order in the SQL editor (or via Supabase CLI): [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), [`003_brand_social_accounts.sql`](supabase/migrations/003_brand_social_accounts.sql), [`004_mention_workflow.sql`](supabase/migrations/004_mention_workflow.sql), [`005_brand_metadata.sql`](supabase/migrations/005_brand_metadata.sql), [`006_entity_graph.sql`](supabase/migrations/006_entity_graph.sql).
+2. Run the SQL migrations in order in the SQL editor (or via Supabase CLI): [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_auth_prefs_brands.sql`](supabase/migrations/002_auth_prefs_brands.sql), [`003_brand_social_accounts.sql`](supabase/migrations/003_brand_social_accounts.sql), [`004_mention_workflow.sql`](supabase/migrations/004_mention_workflow.sql), [`005_brand_metadata.sql`](supabase/migrations/005_brand_metadata.sql), [`006_entity_graph.sql`](supabase/migrations/006_entity_graph.sql), [`007_trend_adoption.sql`](supabase/migrations/007_trend_adoption.sql).
 3. In **Authentication → Providers**, make sure **Email** is enabled (it is by default). Optionally disable "Confirm email" for faster local testing.
 4. Add URL + keys to `.env.local`.
 
-Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `brands`, `brand_keywords`, `brand_mentions`, `brand_mention_comments`, `brand_social_accounts`, `entities`, `entity_edges`, `daily_briefs`.
+Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `brands`, `brand_keywords`, `brand_mentions`, `brand_mention_comments`, `brand_social_accounts`, `entities`, `entity_edges`, `daily_briefs`, `trend_industry_stats`.
 
 ## Internet Intelligence modules
 
@@ -55,7 +55,7 @@ Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `b
 - `/search` — Universal search across the entity graph + brands + today’s report.
 - `/trends` — Daily viral trends report (categorized grid). Cards link into the Trend Database.
 - `/database` — Permanent Trend Database + AI Q&A on each trend.
-- `/opportunities` — Opportunity Engine (white-space scores by industry).
+- `/opportunities` — Opportunity Engine v2 (industry adoption white-space from `trend_industry_stats`).
 - `/brands` — Brand entities with health scores, mentions, feedback, AI setup.
 - `/competitors` — Competitor compare (mentions, sentiment, SOV estimate).
 - `/assistant` — AI assistant for brand health, complaints, and trend recommendations.

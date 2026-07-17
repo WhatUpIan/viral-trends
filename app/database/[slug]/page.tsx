@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { IntelligenceChat } from "@/components/IntelligenceChat";
+import { getTrendIndustryStats } from "@/lib/adoption";
 import {
   entityHref,
   getEntity,
@@ -30,12 +31,21 @@ export default async function TrendDetailPage({ params }: Props) {
 
   const name = await getGreetingName();
   const related = await listRelatedBothWays(entity.id);
+  const industryStats = await getTrendIndustryStats(entity.id);
 
   const creators = related.filter((r) => r.entity.type === "creator");
   const sounds = related.filter((r) => r.entity.type === "sound");
   const topics = related.filter((r) => r.entity.type === "topic");
+  const brands = related.filter(
+    (r) =>
+      (r.entity.type === "brand" || r.entity.type === "company") &&
+      (r.relation === "adopted_by" || r.relation === "mentions"),
+  );
   const others = related.filter(
-    (r) => !["creator", "sound", "topic"].includes(r.entity.type),
+    (r) =>
+      !["creator", "sound", "topic"].includes(r.entity.type) &&
+      r.entity.type !== "brand" &&
+      r.entity.type !== "company",
   );
 
   const url = typeof entity.attrs.url === "string" ? entity.attrs.url : null;
@@ -69,19 +79,26 @@ export default async function TrendDetailPage({ params }: Props) {
             label="Heat"
             value={entity.metrics.heat != null ? String(entity.metrics.heat) : "—"}
           />
-          <Stat
-            label="Views (est.)"
-            value={
-              entity.metrics.views != null ? entity.metrics.views.toLocaleString() : "—"
-            }
-          />
-          <Stat
-            label="Likes (est.)"
-            value={
-              entity.metrics.likes != null ? entity.metrics.likes.toLocaleString() : "—"
-            }
-          />
         </div>
+
+        <section className="mb-8">
+          <h2 className="mb-3 font-[family-name:var(--font-display)] text-lg text-[var(--ink)]">
+            Industries using this
+          </h2>
+          <p className="mb-3 text-xs text-[var(--fog)]">
+            Brand adoption counts from the entity graph (0 = white space in our data).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {industryStats
+              .slice()
+              .sort((a, b) => a.brandCount - b.brandCount)
+              .map((s) => (
+                <span key={s.industry} className="keyword-pill">
+                  {s.industry}: {s.brandCount}
+                </span>
+              ))}
+          </div>
+        </section>
 
         {url && (
           <p className="mb-8 text-sm">
@@ -100,6 +117,7 @@ export default async function TrendDetailPage({ params }: Props) {
           <RelatedBlock title="Creators" items={creators.map((r) => r.entity)} />
           <RelatedBlock title="Sounds / formats" items={sounds.map((r) => r.entity)} />
           <RelatedBlock title="Topics" items={topics.map((r) => r.entity)} />
+          <RelatedBlock title="Brands / companies" items={brands.map((r) => r.entity)} />
           <RelatedBlock title="Other links" items={others.map((r) => r.entity)} />
         </div>
 
@@ -111,7 +129,7 @@ export default async function TrendDetailPage({ params }: Props) {
           suggestions={[
             "Why did this trend explode?",
             "How could a plumbing company use this?",
-            "Who are the top creators on this?",
+            "Which industries have not adopted this yet?",
             "Is this still rising or declining?",
           ]}
         />

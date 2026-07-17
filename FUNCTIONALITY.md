@@ -23,6 +23,8 @@ Positioning: **Internet Intelligence** for marketers and content creators.
 | **Opportunity Engine** | Phase 2 — shipped |
 | **Entity profiles** (creator, sound, topic, …) | Phase 2 — shipped |
 | **AI Assistant** | Phase 2 — shipped |
+| **Opportunity Engine v2** (real industry adoption) | Phase 3 — shipped |
+| **Denser entity graph** (video, industries, adopted_by, news) | Phase 3 — shipped |
 | Mobile Instagram-style brief | Deferred |
 | WebSocket live terminal | Deferred |
 
@@ -48,7 +50,7 @@ Permanent trend entities with lifecycle fields, related creators/sounds/topics, 
 One query across entity graph + brands + today’s report titles.
 
 ### Opportunities (`/opportunities`)
-White-space scores: high heat × under-represented industries.
+White-space scores from **`trend_industry_stats`** (brand counts per industry). Chips show `Construction: 0`, etc. Boosted when your brand’s industry has zero adopters.
 
 ### Brands (`/brands`)
 AI setup, health strip, mentions, feedback, keywords.
@@ -66,8 +68,11 @@ Graph pages for creators, sounds, topics, companies, etc. (trends redirect to `/
 
 ## Entity graph
 
-Tables: `entities`, `entity_edges`, bridges, `daily_briefs`.  
-Types: brand, trend, creator, sound, video, product, company, topic, keyword, meme, news.
+Tables: `entities`, `entity_edges`, `trend_industry_stats`, bridges, `daily_briefs`.  
+Types: brand, trend, creator, sound, video, product, company, topic, keyword, meme, news.  
+Relations include: `adopted_by`, `in_industry`, `covered_by`, `created_by`, `uses_sound`, `about_topic`, `appears_in`.
+
+Migrations: `001` → `007`.
 
 ---
 
@@ -83,7 +88,9 @@ Protected prefixes include all of the above plus `/entities`.
 
 - Instagram-style mobile daily brief swipe
 - True WebSocket / live terminal updates
-- Richer industry presence from web crawl (Opportunity Engine currently heuristic)
+- Full web crawl of every brand using a sound (Phase 3 uses ingest + mention graph only)
+
+See also [`PHASE3.md`](PHASE3.md) for the Phase 3 design notes.
 
 ---
 

@@ -1,6 +1,7 @@
 import type { Comment, CreatorCrawl, Post } from "@creatorcrawl/sdk";
 import { getCreatorCrawl, isCreatorCrawlConfigured } from "../creatorcrawl";
-import { linkMentionCreator } from "../entity-link";
+import { linkMentionCreator, linkMentionToGraph } from "../entity-link";
+import { recomputeTrendIndustryStats } from "../adoption";
 import { getSupabaseAdmin } from "../supabase";
 import { isOwnMention, websiteHost, type BrandSocialAccount } from "./own-account";
 import {
@@ -20,6 +21,8 @@ type BrandRow = {
   name: string;
   status: string;
   website: string | null;
+  entity_id?: string | null;
+  metadata?: { industry?: string } | null;
 };
 
 type KeywordRow = {
@@ -223,7 +226,7 @@ export async function runMentionsIngest(options?: {
     };
   }
 
-  let query = supabase.from("brands").select("id, name, status, website");
+  let query = supabase.from("brands").select("id, name, status, website, entity_id, metadata");
   if (options?.brandIds?.length) {
     query = query.in("id", options.brandIds);
   } else {
@@ -432,6 +435,39 @@ export async function runMentionsIngest(options?: {
       ),
     );
 
+    // Graph densify: brand → trend adoption + news entities (capped)
+    const { data: recentMentions } = await supabase
+      .from("brand_mentions")
+      .select("id, title, snippet, url, platform, source, author")
+      .eq("brand_id", brand.id)
+      .order("created_at", { ascending: false })
+      .limit(6);
+
+    const industry =
+      brand.metadata && typeof brand.metadata === "object"
+        ? (brand.metadata as { industry?: string }).industry
+        : null;
+
+    await Promise.allSettled(
+      (recentMentions ?? []).map((m) =>
+        linkMentionToGraph({
+          brandId: brand.id,
+          brandName: brand.name,
+          brandEntityId: brand.entity_id ?? null,
+          industry: industry ?? null,
+          mention: {
+            id: m.id as string,
+            title: m.title as string | null,
+            snippet: m.snippet as string | null,
+            url: m.url as string,
+            platform: m.platform as string | null,
+            source: m.source as string,
+            author: m.author as string | null,
+          },
+        }),
+      ),
+    );
+
     // Collapse historical duplicates (same post under different URL shapes)
     await collapseDuplicateMentions(supabase, brand.id);
 
@@ -508,6 +544,12 @@ export async function runMentionsIngest(options?: {
       await supabase.from("brand_mentions").delete().in("id", ownIds);
       skippedOwn += ownIds.length;
     }
+  }
+
+  try {
+    await recomputeTrendIndustryStats();
+  } catch (err) {
+    console.warn("[mentions] adoption recompute failed:", err);
   }
 
   return {

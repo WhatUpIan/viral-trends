@@ -43,7 +43,10 @@ export type EntityRelation =
   | "about_topic"
   | "appears_in"
   | "related_keyword"
-  | "sells_product";
+  | "sells_product"
+  | "adopted_by"
+  | "in_industry"
+  | "covered_by";
 
 /** URL-safe slug from a display name */
 export function slugify(input: string): string {
@@ -453,12 +456,23 @@ export async function syncBrandGraph(
   }
 
   if (metadata.industry?.trim()) {
+    const { detectIndustriesFromText, industryTopicSlug } = await import("@/lib/industries");
+    const ind =
+      detectIndustriesFromText(metadata.industry, 1)[0] ?? null;
+    const name = ind ?? metadata.industry.trim();
     const topic = await upsertEntity(
-      { type: "topic", name: metadata.industry.trim(), status: "stable" },
+      {
+        type: "topic",
+        name,
+        slug: ind ? industryTopicSlug(ind) : undefined,
+        attrs: ind ? { kind: "industry", industry: ind } : {},
+        status: "stable",
+      },
       db,
     );
     if (topic) {
       await linkEntities(brandEntityId, topic.id, "about_topic", { evidence }, db);
+      await linkEntities(brandEntityId, topic.id, "in_industry", { evidence }, db);
     }
   }
 }

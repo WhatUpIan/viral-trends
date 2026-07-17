@@ -143,25 +143,56 @@ export default async function SearchPage({ searchParams }: Props) {
             {GROUP_ORDER.map((type) => {
               const list = byType.get(type);
               if (!list?.length) return null;
+              const industryTopics =
+                type === "topic"
+                  ? list.filter((e) => e.attrs?.kind === "industry" || e.slug.startsWith("industry-"))
+                  : [];
+              const otherTopics =
+                type === "topic" ? list.filter((e) => !industryTopics.includes(e)) : list;
+
               return (
-                <section key={type}>
-                  <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--fog)]">
-                    {type}s
-                  </h2>
-                  <ul className="divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
-                    {list.map((e) => (
-                      <li key={e.id}>
-                        <Link
-                          href={entityHref(e)}
-                          className="flex justify-between gap-3 px-4 py-3 text-sm hover:bg-[var(--paper)]"
-                        >
-                          <span className="truncate">{e.name}</span>
-                          <span className="text-[var(--fog)]">{e.status}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <div key={type} className="space-y-6">
+                  {type === "topic" && industryTopics.length > 0 && (
+                    <section>
+                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--fog)]">
+                        Industries
+                      </h2>
+                      <ul className="divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
+                        {industryTopics.map((e) => (
+                          <li key={e.id}>
+                            <Link
+                              href={entityHref(e)}
+                              className="flex justify-between gap-3 px-4 py-3 text-sm hover:bg-[var(--paper)]"
+                            >
+                              <span className="truncate">{e.name}</span>
+                              <span className="text-[var(--fog)]">{e.status}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                  {otherTopics.length > 0 && (
+                    <section>
+                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--fog)]">
+                        {type === "topic" ? "Topics" : `${type}s`}
+                      </h2>
+                      <ul className="divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
+                        {otherTopics.map((e) => (
+                          <li key={e.id}>
+                            <Link
+                              href={entityHref(e)}
+                              className="flex justify-between gap-3 px-4 py-3 text-sm hover:bg-[var(--paper)]"
+                            >
+                              <span className="truncate">{e.name}</span>
+                              <span className="text-[var(--fog)]">{e.status}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                </div>
               );
             })}
 
