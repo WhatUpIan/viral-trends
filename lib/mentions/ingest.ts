@@ -2,6 +2,10 @@ import type { Comment, CreatorCrawl, Post } from "@creatorcrawl/sdk";
 import { getCreatorCrawl, isCreatorCrawlConfigured } from "../creatorcrawl";
 import { getSupabaseAdmin } from "../supabase";
 import { isOwnMention, websiteHost, type BrandSocialAccount } from "./own-account";
+import {
+  mentionContentKey,
+  normalizeMentionUrl,
+} from "./dedupe";
 import { isSearchApiConfigured, searchBing, searchNews, searchWeb, searchYouTube, type WebResult } from "./searchapi";
 
 /** Keep CreatorCrawl credit usage bounded per brand per run */
@@ -94,7 +98,7 @@ function postToMention(
     source: "social",
     platform,
     external_id: String(id),
-    url: post.url,
+    url: normalizeMentionUrl(post.url),
     title: text.slice(0, 200) || null,
     snippet: text.slice(0, 500) || null,
     matched_keyword: keyword,
@@ -118,7 +122,7 @@ function webToMention(result: WebResult, brandId: string, keyword: string): Ment
     source: isYoutube ? "social" : "web",
     platform: result.platform,
     external_id: result.externalId ?? null,
-    url: result.url,
+    url: normalizeMentionUrl(result.url),
     title: clean(result.title),
     snippet: clean(result.snippet),
     matched_keyword: keyword,
@@ -374,12 +378,21 @@ export async function runMentionsIngest(options?: {
       return true;
     });
 
-    // Dedupe by URL within this run
-    const byUrl = new Map<string, MentionInsert>();
+    // Dedupe by normalized URL + content fingerprint within this run
+    const byKey = new Map<string, MentionInsert>();
     for (const m of filtered) {
-      if (!byUrl.has(m.url)) byUrl.set(m.url, m);
+      const key = mentionContentKey(m);
+      const existing = byKey.get(key);
+      if (!existing) {
+        byKey.set(key, m);
+        continue;
+      }
+      // Prefer the row with more metrics / longer snippet
+      const score = (x: MentionInsert) =>
+        (x.snippet?.length ?? 0) + Object.keys(x.metrics).length * 10;
+      if (score(m) > score(existing)) byKey.set(key, m);
     }
-    const unique = [...byUrl.values()];
+    const unique = [...byKey.values()];
 
     for (let i = 0; i < unique.length; i += 20) {
       const batch = unique.slice(i, i + 20);
@@ -397,7 +410,10 @@ export async function runMentionsIngest(options?: {
       }
     }
 
-    // Pull comments for the most-engaged social mentions (feedback tracking)
+    // Collapse historical duplicates (same post under different URL shapes)
+    await collapseDuplicateMentions(supabase, brand.id);
+
+    // Pull comments for unique social posts only (dedupe by normalized URL)
     if (cc) {
       const { data: topSocial } = await supabase
         .from("brand_mentions")
@@ -405,10 +421,20 @@ export async function runMentionsIngest(options?: {
         .eq("brand_id", brand.id)
         .eq("source", "social")
         .order("created_at", { ascending: false })
-        .limit(COMMENT_FETCH_LIMIT);
+        .limit(COMMENT_FETCH_LIMIT * 3);
+
+      const seenUrls = new Set<string>();
+      const commentTargets: { id: string; platform: string | null; url: string }[] = [];
+      for (const mention of topSocial ?? []) {
+        const n = normalizeMentionUrl(mention.url);
+        if (seenUrls.has(n)) continue;
+        seenUrls.add(n);
+        commentTargets.push(mention);
+        if (commentTargets.length >= COMMENT_FETCH_LIMIT) break;
+      }
 
       const commentBatches = await Promise.allSettled(
-        (topSocial ?? []).map(async (mention) => {
+        commentTargets.map(async (mention) => {
           const comments = await fetchCommentsForMention(cc, mention.platform, mention.url);
           return comments
             .slice(0, COMMENTS_PER_MENTION)
@@ -473,4 +499,54 @@ export async function runMentionsIngest(options?: {
     serpApiConfigured: isSearchApiConfigured(),
     webErrors: webErrors.length > 0 ? webErrors : undefined,
   };
+}
+
+type AdminClient = NonNullable<ReturnType<typeof getSupabaseAdmin>>;
+
+/**
+ * Delete older duplicate mention rows for a brand (same post, different URL shapes).
+ * Cascades remove duplicate feedback comments attached to those rows.
+ */
+async function collapseDuplicateMentions(supabase: AdminClient, brandId: string) {
+  const { data: rows } = await supabase
+    .from("brand_mentions")
+    .select("id, platform, external_id, url, title, author, created_at")
+    .eq("brand_id", brandId)
+    .order("created_at", { ascending: true });
+
+  if (!rows?.length) return;
+
+  const keep = new Map<string, string>(); // content key -> id to keep
+  const remove: string[] = [];
+
+  for (const row of rows) {
+    const key = mentionContentKey({
+      platform: row.platform,
+      external_id: row.external_id,
+      url: row.url,
+      title: row.title,
+      author: row.author,
+    });
+    const existing = keep.get(key);
+    if (!existing) {
+      keep.set(key, row.id);
+      // Also rewrite URL to normalized form when safe
+      const normalized = normalizeMentionUrl(row.url);
+      if (normalized !== row.url) {
+        await supabase
+          .from("brand_mentions")
+          .update({ url: normalized })
+          .eq("id", row.id);
+      }
+      continue;
+    }
+    remove.push(row.id);
+  }
+
+  if (remove.length > 0) {
+    await supabase.from("brand_mentions").delete().in("id", remove);
+    console.log(
+      `[mentions] collapsed ${remove.length} duplicate mentions for brand ${brandId}`,
+    );
+  }
 }

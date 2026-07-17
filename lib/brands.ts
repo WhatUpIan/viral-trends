@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { BrandSocialAccount, SocialPlatform } from "@/lib/mentions/own-account";
+import { commentDedupeKey, mentionContentKey, normalizeMentionUrl } from "@/lib/mentions/dedupe";
 
 export type KeywordKind = "generated" | "custom" | "negative";
 
@@ -119,29 +120,44 @@ export async function getBrandMentions(
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  return (data ?? [])
-    .map((row) => ({
-      id: row.id,
-      source: row.source,
+  const mapped = (data ?? []).map((row) => ({
+    id: row.id,
+    source: row.source as BrandMention["source"],
+    platform: row.platform,
+    url: row.url,
+    title: row.title,
+    snippet: row.snippet,
+    matchedKeyword: row.matched_keyword,
+    author: row.author,
+    metrics: (row.metrics as Record<string, number>) ?? {},
+    publishedAt: row.published_at,
+    sentiment: row.sentiment,
+    createdAt: row.created_at,
+    viewed: Boolean(row.viewed),
+    responded: Boolean(row.responded),
+    highlighted: Boolean(row.highlighted),
+  }));
+
+  mapped.sort((a, b) => {
+    const ta = Date.parse(a.publishedAt ?? a.createdAt) || 0;
+    const tb = Date.parse(b.publishedAt ?? b.createdAt) || 0;
+    return tb - ta;
+  });
+
+  const seen = new Set<string>();
+  const out: BrandMention[] = [];
+  for (const row of mapped) {
+    const key = mentionContentKey({
       platform: row.platform,
-      url: row.url,
+      url: normalizeMentionUrl(row.url),
       title: row.title,
-      snippet: row.snippet,
-      matchedKeyword: row.matched_keyword,
       author: row.author,
-      metrics: (row.metrics as Record<string, number>) ?? {},
-      publishedAt: row.published_at,
-      sentiment: row.sentiment,
-      createdAt: row.created_at,
-      viewed: Boolean(row.viewed),
-      responded: Boolean(row.responded),
-      highlighted: Boolean(row.highlighted),
-    }))
-    .sort((a, b) => {
-      const ta = Date.parse(a.publishedAt ?? a.createdAt) || 0;
-      const tb = Date.parse(b.publishedAt ?? b.createdAt) || 0;
-      return tb - ta;
     });
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
 }
 
 export async function getMentionComments(
@@ -152,36 +168,53 @@ export async function getMentionComments(
   const { data } = await supabase
     .from("brand_mention_comments")
     .select(
-      "id, mention_id, author, text, like_count, published_at, sentiment, viewed, responded, highlighted, brand_mentions!inner(brand_id, title, url)",
+      "id, mention_id, external_id, author, text, like_count, published_at, sentiment, viewed, responded, highlighted, brand_mentions!inner(brand_id, title, url)",
     )
     .eq("brand_mentions.brand_id", brandId)
     .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(limit);
+    .limit(limit * 2);
 
-  return (data ?? [])
-    .map((row) => {
-      const mention = row.brand_mentions as unknown as {
-        title: string | null;
-        url: string;
-      };
-      return {
-        id: row.id,
-        mentionId: row.mention_id,
-        author: row.author,
-        text: row.text,
-        likeCount: row.like_count,
-        publishedAt: row.published_at,
-        sentiment: row.sentiment,
-        viewed: Boolean(row.viewed),
-        responded: Boolean(row.responded),
-        highlighted: Boolean(row.highlighted),
-        mentionTitle: mention?.title ?? null,
-        mentionUrl: mention?.url ?? "",
-      };
-    })
-    .sort((a, b) => {
-      const ta = Date.parse(a.publishedAt ?? "") || 0;
-      const tb = Date.parse(b.publishedAt ?? "") || 0;
-      return tb - ta;
+  const mapped = (data ?? []).map((row) => {
+    const mention = row.brand_mentions as unknown as {
+      title: string | null;
+      url: string;
+    };
+    return {
+      id: row.id,
+      mentionId: row.mention_id,
+      author: row.author,
+      text: row.text,
+      likeCount: row.like_count,
+      publishedAt: row.published_at,
+      sentiment: row.sentiment,
+      viewed: Boolean(row.viewed),
+      responded: Boolean(row.responded),
+      highlighted: Boolean(row.highlighted),
+      mentionTitle: mention?.title ?? null,
+      mentionUrl: mention?.url ?? "",
+      externalId: row.external_id as string | null,
+    };
+  });
+
+  const seen = new Set<string>();
+  const deduped = [];
+  for (const c of mapped) {
+    const key = commentDedupeKey({
+      author: c.author,
+      text: c.text,
+      publishedAt: c.publishedAt,
+      externalId: c.externalId,
     });
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const { externalId: _drop, ...rest } = c;
+    deduped.push(rest);
+    if (deduped.length >= limit) break;
+  }
+
+  return deduped.sort((a, b) => {
+    const ta = Date.parse(a.publishedAt ?? "") || 0;
+    const tb = Date.parse(b.publishedAt ?? "") || 0;
+    return tb - ta;
+  });
 }
