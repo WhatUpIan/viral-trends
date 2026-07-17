@@ -31,7 +31,7 @@ For local UI without Supabase, set `USE_MOCK_REPORT=true` in `.env.local` so the
 | `CREATORCRAWL_API_KEY` | Yes (ingest) | Third-party social data |
 | `OPENAI_API_KEY` | Optional | Category + insight blurbs + brand keyword generation |
 | `OPENAI_MODEL` | Optional | Default `gpt-4o-mini` |
-| `SERPAPI_API_KEY` | Optional | Web + Google News brand mentions ([serpapi.com](https://serpapi.com)) |
+| `SEARCHAPI_API_KEY` | Optional | Web + Google News brand mentions ([searchapi.io](https://www.searchapi.io)) |
 | `CRON_SECRET` | Yes (ingest) | Auth for `/api/cron/ingest` and `/api/cron/mentions` |
 | `USE_MOCK_REPORT` | Optional | `true` to use mock data on `/` |
 
@@ -55,10 +55,10 @@ Tables: `reports`, `trends`, `categories`, `profiles`, `user_category_prefs`, `b
 - `/brands` — add a brand (name, website, description). Keywords are auto-generated with OpenAI (heuristic fallback without a key).
 - **Custom keywords:** add product names, campaign hashtags, etc.
 - **Negative keywords:** mentions containing these are excluded.
-- `/api/cron/mentions` runs every 6 hours (see `vercel.json`): searches TikTok, YouTube, Instagram, and Reddit via CreatorCrawl plus Google web + News via SerpAPI, then pulls top comments from recent social mentions for feedback tracking.
+- `/api/cron/mentions` runs every 6 hours (see `vercel.json`): searches TikTok, YouTube, Instagram, and Reddit via CreatorCrawl plus Google web + News via SearchAPI.io, then pulls top comments from recent social mentions for feedback tracking.
 - Trigger manually: `curl -X POST "https://YOUR_DOMAIN/api/cron/mentions" -H "Authorization: Bearer $CRON_SECRET"`
 
-**Credit note:** each brand uses up to 5 keywords × 4 social platforms per run (~20 CreatorCrawl calls) plus 2 SerpAPI calls per keyword, plus up to 5 comment fetches. Pause a brand from its detail page to stop its runs.
+**Credit note:** each brand uses up to 5 keywords × 4 social platforms per run (~20 CreatorCrawl calls) plus 2 SearchAPI calls per keyword, plus up to 5 comment fetches. Pause a brand from its detail page to stop its runs.
 
 ## CreatorCrawl credits
 
@@ -118,7 +118,7 @@ In **Project → Settings → Environment Variables**, add for Production (and P
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon/public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role (server only — never expose to client) |
 | `CREATORCRAWL_API_KEY` | Required for daily ingest + social mentions |
-| `SERPAPI_API_KEY` | Optional — web/news brand mentions |
+| `SEARCHAPI_API_KEY` | Optional — web/news brand mentions ([searchapi.io](https://www.searchapi.io)) |
 | `CRON_SECRET` | Long random string; Vercel Cron uses it automatically |
 | `OPENAI_API_KEY` | Optional |
 | `OPENAI_MODEL` | Optional (`gpt-4o-mini`) |

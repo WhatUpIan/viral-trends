@@ -2,7 +2,7 @@ import type { Comment, CreatorCrawl, Post } from "@creatorcrawl/sdk";
 import { getCreatorCrawl, isCreatorCrawlConfigured } from "../creatorcrawl";
 import { getSupabaseAdmin } from "../supabase";
 import { isOwnMention, websiteHost, type BrandSocialAccount } from "./own-account";
-import { isSerpApiConfigured, searchNews, searchWeb, type WebResult } from "./serpapi";
+import { isSearchApiConfigured, searchNews, searchWeb, type WebResult } from "./searchapi";
 
 /** Keep CreatorCrawl credit usage bounded per brand per run */
 const MAX_SEARCH_KEYWORDS = 5;
@@ -46,6 +46,7 @@ export type MentionsIngestResult = {
   skippedOwn?: number;
   byPlatform?: Record<string, number>;
   serpApiConfigured?: boolean;
+  searchApiConfigured?: boolean;
   webErrors?: string[];
   error?: string;
 };
@@ -206,13 +207,13 @@ export async function runMentionsIngest(options?: {
       error: "Supabase is not configured",
     };
   }
-  if (!isCreatorCrawlConfigured() && !isSerpApiConfigured()) {
+  if (!isCreatorCrawlConfigured() && !isSearchApiConfigured()) {
     return {
       ok: false,
       brandsProcessed: 0,
       mentionsUpserted: 0,
       commentsUpserted: 0,
-      error: "Neither CreatorCrawl nor SerpAPI is configured",
+      error: "Neither CreatorCrawl nor SearchAPI is configured",
     };
   }
 
@@ -310,7 +311,7 @@ export async function runMentionsIngest(options?: {
             }),
           );
         }
-        if (isSerpApiConfigured()) {
+        if (isSearchApiConfigured()) {
           tasks.push(
             searchWeb(keyword, excludeDomain)
               .then((results) => {
@@ -449,7 +450,8 @@ export async function runMentionsIngest(options?: {
     commentsUpserted,
     skippedOwn,
     byPlatform,
-    serpApiConfigured: isSerpApiConfigured(),
+    searchApiConfigured: isSearchApiConfigured(),
+    serpApiConfigured: isSearchApiConfigured(),
     webErrors: webErrors.length > 0 ? webErrors : undefined,
   };
 }

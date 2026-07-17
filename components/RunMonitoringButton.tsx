@@ -36,6 +36,7 @@ export function RunMonitoringButton({
         brandsProcessed?: number;
         skippedOwn?: number;
         byPlatform?: Record<string, number>;
+        searchApiConfigured?: boolean;
         serpApiConfigured?: boolean;
         webErrors?: string[];
       };
@@ -53,8 +54,8 @@ export function RunMonitoringButton({
         : "";
 
       let webNote = "";
-      if (data.serpApiConfigured === false) {
-        webNote = " Web search is off — SERPAPI_API_KEY is not set.";
+      if (data.searchApiConfigured === false && data.serpApiConfigured === false) {
+        webNote = " Web search is off — set SEARCHAPI_API_KEY in Vercel.";
       } else if (data.webErrors?.length) {
         webNote = ` Web search error: ${data.webErrors[0]}`;
       }
