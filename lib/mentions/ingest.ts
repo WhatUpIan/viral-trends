@@ -45,6 +45,8 @@ export type MentionsIngestResult = {
   commentsUpserted: number;
   skippedOwn?: number;
   byPlatform?: Record<string, number>;
+  serpApiConfigured?: boolean;
+  webErrors?: string[];
   error?: string;
 };
 
@@ -276,6 +278,7 @@ export async function runMentionsIngest(options?: {
   let commentsUpserted = 0;
   let skippedOwn = 0;
   const byPlatform: Record<string, number> = {};
+  const webErrors: string[] = [];
 
   for (const brand of activeBrands) {
     const rows = keywordsByBrand.get(brand.id) ?? [];
@@ -305,9 +308,18 @@ export async function runMentionsIngest(options?: {
         ]);
         if (web.status === "fulfilled") {
           mentions.push(...web.value.map((r) => webToMention(r, brand.id, keyword)));
+        } else {
+          const msg = web.reason instanceof Error ? web.reason.message : String(web.reason);
+          console.warn(`[mentions] web search "${keyword}" failed:`, msg);
+          if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
         }
         if (news.status === "fulfilled") {
           mentions.push(...news.value.map((r) => webToMention(r, brand.id, keyword)));
+        } else {
+          const msg =
+            news.reason instanceof Error ? news.reason.message : String(news.reason);
+          console.warn(`[mentions] news search "${keyword}" failed:`, msg);
+          if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
         }
       }
     }
@@ -416,5 +428,7 @@ export async function runMentionsIngest(options?: {
     commentsUpserted,
     skippedOwn,
     byPlatform,
+    serpApiConfigured: isSerpApiConfigured(),
+    webErrors: webErrors.length > 0 ? webErrors : undefined,
   };
 }

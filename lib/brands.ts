@@ -31,6 +31,9 @@ export type BrandMention = {
   publishedAt: string | null;
   sentiment: "positive" | "neutral" | "negative" | null;
   createdAt: string;
+  viewed: boolean;
+  responded: boolean;
+  highlighted: boolean;
 };
 
 export type MentionComment = {
@@ -41,6 +44,9 @@ export type MentionComment = {
   likeCount: number | null;
   publishedAt: string | null;
   sentiment: "positive" | "neutral" | "negative" | null;
+  viewed: boolean;
+  responded: boolean;
+  highlighted: boolean;
 };
 
 function toBrand(row: Record<string, unknown>): Brand {
@@ -107,7 +113,7 @@ export async function getBrandMentions(
   const { data } = await supabase
     .from("brand_mentions")
     .select(
-      "id, source, platform, url, title, snippet, matched_keyword, author, metrics, published_at, sentiment, created_at",
+      "id, source, platform, url, title, snippet, matched_keyword, author, metrics, published_at, sentiment, created_at, viewed, responded, highlighted",
     )
     .eq("brand_id", brandId)
     .order("published_at", { ascending: false, nullsFirst: false })
@@ -126,6 +132,9 @@ export async function getBrandMentions(
     publishedAt: row.published_at,
     sentiment: row.sentiment,
     createdAt: row.created_at,
+    viewed: Boolean(row.viewed),
+    responded: Boolean(row.responded),
+    highlighted: Boolean(row.highlighted),
   }));
 }
 
@@ -137,7 +146,7 @@ export async function getMentionComments(
   const { data } = await supabase
     .from("brand_mention_comments")
     .select(
-      "id, mention_id, author, text, like_count, published_at, sentiment, brand_mentions!inner(brand_id, title, url)",
+      "id, mention_id, author, text, like_count, published_at, sentiment, viewed, responded, highlighted, brand_mentions!inner(brand_id, title, url)",
     )
     .eq("brand_mentions.brand_id", brandId)
     .order("published_at", { ascending: false, nullsFirst: false })
@@ -156,6 +165,9 @@ export async function getMentionComments(
       likeCount: row.like_count,
       publishedAt: row.published_at,
       sentiment: row.sentiment,
+      viewed: Boolean(row.viewed),
+      responded: Boolean(row.responded),
+      highlighted: Boolean(row.highlighted),
       mentionTitle: mention?.title ?? null,
       mentionUrl: mention?.url ?? "",
     };

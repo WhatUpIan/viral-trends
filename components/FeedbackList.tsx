@@ -1,6 +1,10 @@
+import { setCommentFlag } from "@/app/brands/actions";
+import { FlagBar } from "@/components/FlagBar";
+import { LocalTime } from "@/components/LocalTime";
 import type { MentionComment } from "@/lib/brands";
 
 type Props = {
+  brandId: string;
   comments: (MentionComment & { mentionTitle: string | null; mentionUrl: string })[];
 };
 
@@ -14,7 +18,7 @@ function sentimentDot(sentiment: MentionComment["sentiment"]) {
   return <span className={`inline-block h-2 w-2 rounded-full ${color}`} aria-hidden />;
 }
 
-export function FeedbackList({ comments }: Props) {
+export function FeedbackList({ brandId, comments }: Props) {
   if (comments.length === 0) {
     return (
       <div className="border border-[var(--line)] bg-white px-6 py-14 text-center">
@@ -30,8 +34,13 @@ export function FeedbackList({ comments }: Props) {
   return (
     <ul className="divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
       {comments.map((c) => (
-        <li key={c.id} className="px-5 py-4">
-          <div className="mb-1 flex items-center gap-2">
+        <li
+          key={c.id}
+          className={`px-5 py-4 ${c.highlighted ? "mention-highlighted" : ""} ${
+            c.viewed && !c.highlighted ? "mention-viewed" : ""
+          }`}
+        >
+          <div className="mb-1 flex flex-wrap items-center gap-2">
             {sentimentDot(c.sentiment)}
             <span className="text-sm font-medium text-[var(--ink)]">
               {c.author ? `@${c.author}` : "Anonymous"}
@@ -41,10 +50,7 @@ export function FeedbackList({ comments }: Props) {
             )}
             {c.publishedAt && (
               <span className="ml-auto text-xs text-[var(--fog)]">
-                {new Date(c.publishedAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
+                <LocalTime iso={c.publishedAt} />
               </span>
             )}
           </div>
@@ -57,6 +63,10 @@ export function FeedbackList({ comments }: Props) {
           >
             on: {c.mentionTitle || c.mentionUrl}
           </a>
+          <FlagBar
+            flags={{ viewed: c.viewed, responded: c.responded, highlighted: c.highlighted }}
+            onToggle={setCommentFlag.bind(null, brandId, c.id)}
+          />
         </li>
       ))}
     </ul>

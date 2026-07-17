@@ -136,6 +136,54 @@ export async function deleteBrand(brandId: string) {
   redirect("/brands");
 }
 
+export async function updateBrand(brandId: string, formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const website = String(formData.get("website") ?? "").trim() || null;
+  const description = String(formData.get("description") ?? "").trim() || null;
+  if (!name) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("brands")
+    .update({ name, website, description, updated_at: new Date().toISOString() })
+    .eq("id", brandId);
+  revalidatePath(`/brands/${brandId}`);
+  revalidatePath("/brands");
+}
+
+const MENTION_FLAGS = ["viewed", "responded", "highlighted"] as const;
+type MentionFlag = (typeof MENTION_FLAGS)[number];
+
+export async function setMentionFlag(
+  brandId: string,
+  mentionId: string,
+  flag: MentionFlag,
+  value: boolean,
+) {
+  if (!MENTION_FLAGS.includes(flag)) return;
+  const supabase = await createClient();
+  await supabase
+    .from("brand_mentions")
+    .update({ [flag]: value })
+    .eq("id", mentionId);
+  revalidatePath(`/brands/${brandId}`);
+}
+
+export async function setCommentFlag(
+  brandId: string,
+  commentId: string,
+  flag: MentionFlag,
+  value: boolean,
+) {
+  if (!MENTION_FLAGS.includes(flag)) return;
+  const supabase = await createClient();
+  await supabase
+    .from("brand_mention_comments")
+    .update({ [flag]: value })
+    .eq("id", commentId);
+  revalidatePath(`/brands/${brandId}`);
+}
+
 export async function saveSocialAccounts(brandId: string, formData: FormData) {
   const user = await getUser();
   if (!user) redirect(`/login?next=/brands/${brandId}?tab=accounts`);

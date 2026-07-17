@@ -36,6 +36,8 @@ export function RunMonitoringButton({
         brandsProcessed?: number;
         skippedOwn?: number;
         byPlatform?: Record<string, number>;
+        serpApiConfigured?: boolean;
+        webErrors?: string[];
       };
 
       if (!res.ok || !data.ok) {
@@ -50,12 +52,20 @@ export function RunMonitoringButton({
             .join(", ")
         : "";
 
+      let webNote = "";
+      if (data.serpApiConfigured === false) {
+        webNote = " Web search is off — SERPAPI_API_KEY is not set.";
+      } else if (data.webErrors?.length) {
+        webNote = ` Web search error: ${data.webErrors[0]}`;
+      }
+
       setMessage(
         `Found ${data.mentionsUpserted ?? 0} mentions` +
           (data.commentsUpserted ? `, ${data.commentsUpserted} comments` : "") +
           (data.skippedOwn ? ` (${data.skippedOwn} own posts skipped)` : "") +
           (platformBits ? `. ${platformBits}` : "") +
-          ".",
+          "." +
+          webNote,
       );
       router.refresh();
     } catch {

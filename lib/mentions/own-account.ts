@@ -1,4 +1,11 @@
-export type SocialPlatform = "tiktok" | "youtube" | "instagram" | "x" | "reddit";
+export type SocialPlatform =
+  | "tiktok"
+  | "youtube"
+  | "instagram"
+  | "x"
+  | "reddit"
+  | "facebook"
+  | "linkedin";
 
 export type BrandSocialAccount = {
   platform: SocialPlatform;
@@ -10,6 +17,8 @@ export const SOCIAL_PLATFORMS: { id: SocialPlatform; label: string; placeholder:
   { id: "instagram", label: "Instagram", placeholder: "yourbrand" },
   { id: "youtube", label: "YouTube", placeholder: "yourbrand or @yourbrand" },
   { id: "x", label: "X (Twitter)", placeholder: "yourbrand" },
+  { id: "facebook", label: "Facebook", placeholder: "yourbrand" },
+  { id: "linkedin", label: "LinkedIn", placeholder: "company/yourbrand" },
   { id: "reddit", label: "Reddit", placeholder: "yourbrand" },
 ];
 
@@ -88,6 +97,19 @@ export function isOwnMention(
       case "reddit":
         if (url.includes(`/user/${handle}`) || url.includes(`/u/${handle}`)) return true;
         break;
+      case "facebook":
+        if (url.includes(`facebook.com/${handle}`)) return true;
+        break;
+      case "linkedin": {
+        const clean = handle.replace(/^company\//, "");
+        if (
+          url.includes(`linkedin.com/company/${clean}`) ||
+          url.includes(`linkedin.com/in/${clean}`)
+        ) {
+          return true;
+        }
+        break;
+      }
     }
   }
 

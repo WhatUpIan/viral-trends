@@ -19,20 +19,20 @@ import {
   regenerateKeywords,
   saveSocialAccounts,
   toggleBrandStatus,
+  updateBrand,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; source?: string }>;
+  searchParams: Promise<{ tab?: string; source?: string; flag?: string }>;
 };
 
 const TABS = [
   { id: "mentions", label: "Mentions" },
-  { id: "keywords", label: "Keywords" },
-  { id: "accounts", label: "Accounts" },
   { id: "feedback", label: "Feedback" },
+  { id: "profile", label: "Profile" },
 ] as const;
 
 export default async function BrandDetailPage({ params, searchParams }: Props) {
@@ -43,14 +43,8 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
   const brand = await getBrand(id);
   if (!brand) notFound();
 
-  const { tab: rawTab, source } = await searchParams;
+  const { tab: rawTab, source, flag } = await searchParams;
   const tab = TABS.some((t) => t.id === rawTab) ? rawTab : "mentions";
-
-  const keywords = await getBrandKeywords(id);
-  const socialAccounts = await getBrandSocialAccounts(id);
-  const generated = keywords.filter((k) => k.kind === "generated");
-  const custom = keywords.filter((k) => k.kind === "custom");
-  const negative = keywords.filter((k) => k.kind === "negative");
 
   return (
     <main className="min-h-screen">
@@ -114,71 +108,137 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
             mentions={await getBrandMentions(id)}
             brandId={brand.id}
             sourceFilter={source === "social" || source === "web" ? source : null}
+            flagFilter={flag === "highlighted" || flag === "unviewed" ? flag : null}
           />
         )}
 
-        {tab === "keywords" && (
-          <div className="space-y-10">
-            <section>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
-                  Generated keywords
-                </h2>
-                <form action={regenerateKeywords.bind(null, brand.id)}>
-                  <button type="submit" className="btn-secondary text-xs">
-                    Regenerate
-                  </button>
-                </form>
-              </div>
-              <p className="mb-4 text-sm text-[var(--fog)]">
-                Auto-generated from your brand profile. These are searched along with your custom
-                keywords.
-              </p>
-              <KeywordPills brandId={brand.id} keywords={generated} />
-            </section>
-
-            <section>
-              <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
-                Custom keywords
-              </h2>
-              <p className="mb-4 text-sm text-[var(--fog)]">
-                Product names, campaign hashtags, founder names — anything else worth tracking.
-              </p>
-              <KeywordPills brandId={brand.id} keywords={custom} />
-              <AddKeywordForm brandId={brand.id} kind="custom" placeholder="e.g. #acmesummer" />
-            </section>
-
-            <section>
-              <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
-                Negative keywords
-              </h2>
-              <p className="mb-4 text-sm text-[var(--fog)]">
-                Mentions containing these are excluded — use for unrelated meanings of your name.
-              </p>
-              <KeywordPills brandId={brand.id} keywords={negative} negative />
-              <AddKeywordForm brandId={brand.id} kind="negative" placeholder="e.g. acme looney tunes" />
-            </section>
-          </div>
+        {tab === "feedback" && (
+          <FeedbackList brandId={brand.id} comments={await getMentionComments(id)} />
         )}
 
-        {tab === "feedback" && <FeedbackList comments={await getMentionComments(id)} />}
-
-        {tab === "accounts" && (
-          <div>
-            <p className="mb-4 text-sm text-[var(--fog)]">
-              Add your official handles on each platform. Monitoring will skip your own posts and
-              pages on your website.
-            </p>
-            <form action={saveSocialAccounts.bind(null, brand.id)} className="space-y-4">
-              <BrandSocialFields accounts={socialAccounts} />
-              <button type="submit" className="btn-primary">
-                Save accounts
-              </button>
-            </form>
-          </div>
+        {tab === "profile" && (
+          <ProfileTab
+            brand={brand}
+            keywords={await getBrandKeywords(id)}
+            socialAccounts={await getBrandSocialAccounts(id)}
+          />
         )}
       </div>
     </main>
+  );
+}
+
+async function ProfileTab({
+  brand,
+  keywords,
+  socialAccounts,
+}: {
+  brand: NonNullable<Awaited<ReturnType<typeof getBrand>>>;
+  keywords: Awaited<ReturnType<typeof getBrandKeywords>>;
+  socialAccounts: Awaited<ReturnType<typeof getBrandSocialAccounts>>;
+}) {
+  const generated = keywords.filter((k) => k.kind === "generated");
+  const custom = keywords.filter((k) => k.kind === "custom");
+  const negative = keywords.filter((k) => k.kind === "negative");
+
+  return (
+    <div className="space-y-12">
+      <section>
+        <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+          Brand details
+        </h2>
+        <form action={updateBrand.bind(null, brand.id)} className="max-w-xl space-y-4">
+          <div>
+            <label htmlFor="name" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
+              Brand name *
+            </label>
+            <input id="name" name="name" required defaultValue={brand.name} className="auth-input" />
+          </div>
+          <div>
+            <label htmlFor="website" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
+              Website
+            </label>
+            <input
+              id="website"
+              name="website"
+              defaultValue={brand.website ?? ""}
+              className="auth-input"
+              placeholder="acmecoffee.com"
+            />
+          </div>
+          <div>
+            <label htmlFor="description" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
+              Description
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows={3}
+              defaultValue={brand.description ?? ""}
+              className="auth-input resize-y"
+            />
+          </div>
+          <button type="submit" className="btn-primary">
+            Save details
+          </button>
+        </form>
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+          Social accounts
+        </h2>
+        <p className="mb-4 text-sm text-[var(--fog)]">
+          Your official handles. Monitoring skips posts from these accounts and pages on your
+          website, so you only see what others say.
+        </p>
+        <form action={saveSocialAccounts.bind(null, brand.id)} className="max-w-2xl space-y-4">
+          <BrandSocialFields accounts={socialAccounts} />
+          <button type="submit" className="btn-primary">
+            Save accounts
+          </button>
+        </form>
+      </section>
+
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+            Generated keywords
+          </h2>
+          <form action={regenerateKeywords.bind(null, brand.id)}>
+            <button type="submit" className="btn-secondary text-xs">
+              Regenerate
+            </button>
+          </form>
+        </div>
+        <p className="mb-4 text-sm text-[var(--fog)]">
+          Auto-generated from your brand profile. Searched along with your custom keywords.
+        </p>
+        <KeywordPills brandId={brand.id} keywords={generated} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+          Custom keywords
+        </h2>
+        <p className="mb-4 text-sm text-[var(--fog)]">
+          Product names, campaign hashtags, founder names — anything else worth tracking.
+        </p>
+        <KeywordPills brandId={brand.id} keywords={custom} />
+        <AddKeywordForm brandId={brand.id} kind="custom" placeholder="e.g. #acmesummer" />
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+          Negative keywords
+        </h2>
+        <p className="mb-4 text-sm text-[var(--fog)]">
+          Mentions containing these are excluded — use for unrelated meanings of your name.
+        </p>
+        <KeywordPills brandId={brand.id} keywords={negative} negative />
+        <AddKeywordForm brandId={brand.id} kind="negative" placeholder="e.g. acme looney tunes" />
+      </section>
+    </div>
   );
 }
 
