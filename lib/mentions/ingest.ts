@@ -297,31 +297,49 @@ export async function runMentionsIngest(options?: {
 
     const mentions: MentionInsert[] = [];
 
-    for (const keyword of queries) {
-      if (cc) {
-        mentions.push(...(await searchSocial(cc, keyword, brand.id)));
-      }
-      if (isSerpApiConfigured()) {
-        const [web, news] = await Promise.allSettled([
-          searchWeb(keyword, excludeDomain),
-          searchNews(keyword, excludeDomain),
-        ]);
-        if (web.status === "fulfilled") {
-          mentions.push(...web.value.map((r) => webToMention(r, brand.id, keyword)));
-        } else {
-          const msg = web.reason instanceof Error ? web.reason.message : String(web.reason);
-          console.warn(`[mentions] web search "${keyword}" failed:`, msg);
-          if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
+    // All keywords in parallel — sequential runs blow past Vercel's 60s limit
+    const keywordResults = await Promise.allSettled(
+      queries.map(async (keyword) => {
+        const out: MentionInsert[] = [];
+        const tasks: Promise<void>[] = [];
+
+        if (cc) {
+          tasks.push(
+            searchSocial(cc, keyword, brand.id).then((items) => {
+              out.push(...items);
+            }),
+          );
         }
-        if (news.status === "fulfilled") {
-          mentions.push(...news.value.map((r) => webToMention(r, brand.id, keyword)));
-        } else {
-          const msg =
-            news.reason instanceof Error ? news.reason.message : String(news.reason);
-          console.warn(`[mentions] news search "${keyword}" failed:`, msg);
-          if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
+        if (isSerpApiConfigured()) {
+          tasks.push(
+            searchWeb(keyword, excludeDomain)
+              .then((results) => {
+                out.push(...results.map((r) => webToMention(r, brand.id, keyword)));
+              })
+              .catch((err: unknown) => {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.warn(`[mentions] web search "${keyword}" failed:`, msg);
+                if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
+              }),
+            searchNews(keyword, excludeDomain)
+              .then((results) => {
+                out.push(...results.map((r) => webToMention(r, brand.id, keyword)));
+              })
+              .catch((err: unknown) => {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.warn(`[mentions] news search "${keyword}" failed:`, msg);
+                if (webErrors.length < 3 && !webErrors.includes(msg)) webErrors.push(msg);
+              }),
+          );
         }
-      }
+
+        await Promise.all(tasks);
+        return out;
+      }),
+    );
+
+    for (const result of keywordResults) {
+      if (result.status === "fulfilled") mentions.push(...result.value);
     }
 
     // Drop negative keywords and posts from the brand's own official accounts.
@@ -369,28 +387,31 @@ export async function runMentionsIngest(options?: {
         .order("created_at", { ascending: false })
         .limit(COMMENT_FETCH_LIMIT);
 
-      for (const mention of topSocial ?? []) {
-        const comments = await fetchCommentsForMention(cc, mention.platform, mention.url);
-        const rows = comments
-          .slice(0, COMMENTS_PER_MENTION)
-          .filter((c) => c.id && c.text)
-          .map((c) => ({
-            mention_id: mention.id,
-            external_id: String(c.id),
-            author: clean(c.author?.handle ?? null),
-            text: clean(c.text) ?? "",
-            like_count: c.like_count ?? null,
-            published_at: c.created_at ?? null,
-            sentiment: heuristicSentiment(c.text),
-          }))
-          .filter((r) => r.text.length > 0);
+      const commentBatches = await Promise.allSettled(
+        (topSocial ?? []).map(async (mention) => {
+          const comments = await fetchCommentsForMention(cc, mention.platform, mention.url);
+          return comments
+            .slice(0, COMMENTS_PER_MENTION)
+            .filter((c) => c.id && c.text)
+            .map((c) => ({
+              mention_id: mention.id,
+              external_id: String(c.id),
+              author: clean(c.author?.handle ?? null),
+              text: clean(c.text) ?? "",
+              like_count: c.like_count ?? null,
+              published_at: c.created_at ?? null,
+              sentiment: heuristicSentiment(c.text),
+            }))
+            .filter((r) => r.text.length > 0);
+        }),
+      );
 
-        if (rows.length > 0) {
-          const { error } = await supabase
-            .from("brand_mention_comments")
-            .upsert(rows, { onConflict: "mention_id,external_id" });
-          if (!error) commentsUpserted += rows.length;
-        }
+      for (const batch of commentBatches) {
+        if (batch.status !== "fulfilled" || batch.value.length === 0) continue;
+        const { error } = await supabase
+          .from("brand_mention_comments")
+          .upsert(batch.value, { onConflict: "mention_id,external_id" });
+        if (!error) commentsUpserted += batch.value.length;
       }
     }
 
