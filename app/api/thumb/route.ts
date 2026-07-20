@@ -16,6 +16,8 @@ const ALLOWED_HOST_HINTS = [
   "redd.it",
   "redditmedia",
   "supabase",
+  "unsplash.com",
+  "images.unsplash.com",
 ];
 
 /**

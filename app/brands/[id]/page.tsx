@@ -75,7 +75,7 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
   const socialAccounts = tab === "profile" ? await getBrandSocialAccounts(id) : [];
 
   return (
-    <AppChrome pathname="/brands">
+    <AppChrome pathname="/brands" activeBrandId={brand.id}>
       <div className="page-hero">
         <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-4 py-8 sm:px-6">
           <div className="min-w-0">

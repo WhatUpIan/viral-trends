@@ -1,4 +1,7 @@
+import { AuthHashHandler } from "@/components/AuthHashHandler";
+import { BrandSwitcher } from "@/components/BrandSwitcher";
 import { isAdminEmail } from "@/lib/admin";
+import { listBrands } from "@/lib/brands";
 import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 
@@ -13,6 +16,7 @@ const NAV = [
 type Props = {
   children: React.ReactNode;
   pathname?: string;
+  activeBrandId?: string | null;
 };
 
 function isActive(pathname: string | undefined, href: string): boolean {
@@ -25,17 +29,21 @@ function isActive(pathname: string | undefined, href: string): boolean {
 }
 
 /**
- * Slim modern SaaS top chrome — four pillars + auth.
+ * Slim modern SaaS top chrome — four pillars + brand switcher + auth.
  */
-export async function AppChrome({ children, pathname }: Props) {
+export async function AppChrome({ children, pathname, activeBrandId }: Props) {
   const user = await getUser();
   const admin = isAdminEmail(user?.email);
+  const brands = user
+    ? (await listBrands()).map((b) => ({ id: b.id, name: b.name }))
+    : [];
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--canvas)]">
+      <AuthHashHandler />
       <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-6">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-4 sm:gap-6">
             <Link
               href="/"
               className="shrink-0 font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight text-[var(--ink)]"
@@ -65,8 +73,13 @@ export async function AppChrome({ children, pathname }: Props) {
           <div className="flex shrink-0 items-center gap-2 text-sm">
             {user ? (
               <>
+                <BrandSwitcher
+                  brands={brands}
+                  activeBrandId={activeBrandId}
+                  pathname={pathname}
+                />
                 {admin && (
-                  <span className="hidden text-[10px] uppercase tracking-wide text-[var(--fog)] sm:inline">
+                  <span className="hidden text-[10px] uppercase tracking-wide text-[var(--fog)] lg:inline">
                     Admin
                   </span>
                 )}

@@ -1,11 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
-/** Handles email-confirmation links: exchanges the code for a session. */
+/**
+ * Handles email confirmation + password-recovery links (PKCE `?code=`).
+ * Recovery should use redirectTo ending in /auth/callback?next=/reset-password
+ */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/";
+  const nextRaw = url.searchParams.get("next") ?? "/";
+  const next = nextRaw.startsWith("/") ? nextRaw : "/";
 
   if (code) {
     const supabase = await createClient();
@@ -13,6 +17,9 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(new URL(next, url.origin));
     }
+    return NextResponse.redirect(
+      new URL(`/login?error=${encodeURIComponent(error.message)}`, url.origin),
+    );
   }
 
   return NextResponse.redirect(new URL("/login?error=confirmation_failed", url.origin));
