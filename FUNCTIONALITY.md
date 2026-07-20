@@ -1,97 +1,56 @@
 # Signalbrief — Functionality Overview
 
-Local reference for everything the app does today.  
-Positioning: **Internet Intelligence** for marketers and content creators.
+Focused SaaS for **US video trends**, **memes**, **brand mentions**, and **brand feedback**.
 
 **Live app:** https://viral-trends-kn52.vercel.app/
 
 ---
 
-## Product framing
+## Four pillars
 
-| Module | Status |
-|--------|--------|
-| **My Dashboard** | Shipped |
-| **Morning Brief** (AI analyst) | Shipped |
-| **Trends** (daily report grid) | Shipped |
-| **Brands** (entity profile + mentions) | Shipped |
-| **Entity graph** (schema) | Shipped |
-| **Trend Database** | Phase 2 — shipped |
-| **AI trend / entity conversation** | Phase 2 — shipped |
-| **Universal Search** | Phase 2 — shipped |
-| **Competitors compare** | Phase 2 — shipped |
-| **Opportunity Engine** | Phase 2 — shipped |
-| **Entity profiles** (creator, sound, topic, …) | Phase 2 — shipped |
-| **AI Assistant** | Phase 2 — shipped |
-| **Opportunity Engine v2** (real industry adoption) | Phase 3 — shipped |
-| **Denser entity graph** (video, industries, adopted_by, news) | Phase 3 — shipped |
-| Mobile Instagram-style brief | Deferred |
-| WebSocket live terminal | Deferred |
+| Pillar | Route | What it does |
+|--------|-------|--------------|
+| **Trends** | `/` | Daily US remake-ready short-form report (grid) |
+| **Memes** | `/memes` | Memes & Humor + Formats & Challenges from the same report |
+| **Brand Mentions** | `/mentions`, `/brands/[id]` | Social + web mentions (SearchAPI + CreatorCrawl) |
+| **Brand Feedback** | `/feedback`, `/brands/[id]?tab=feedback` | Comments on mentions |
 
-Everything updates on page load / after monitoring runs (no live sockets yet).
+**Also:** AI brand setup (`/brands/new`), category prefs (`/settings/categories`), auth (`/login`, `/signup`), archive (`/archive`, `/report/[date]`).
 
 ---
 
-## Modules
+## What was cut
 
-### Dashboard (`/dashboard`)
-KPI strip, Brand Health, Internet Right Now, Alerts.
+Hard-cut from the Internet Intelligence sprawl. These routes redirect to `/` or `/brands`:
 
-### Morning Brief (`/brief`)
-AI overnight narrative; cached in `daily_briefs`.
+Dashboard, Morning Brief, Trend Database, Opportunities, Competitors, Assistant, Search, entity profiles, `/trends` (merged into `/`).
 
-### Trends (`/trends`)
-Daily categorized remake-ready report. Cards link into Trend Database.
-
-### Trend Database (`/database`, `/database/[slug]`)
-Permanent trend entities with lifecycle fields, related creators/sounds/topics, and AI Q&A.
-
-### Search (`/search`)
-One query across entity graph + brands + today’s report titles.
-
-### Opportunities (`/opportunities`)
-White-space scores from **`trend_industry_stats`** (brand counts per industry). Chips show `Construction: 0`, etc. Boosted when your brand’s industry has zero adopters.
-
-### Brands (`/brands`)
-AI setup, health strip, mentions, feedback, keywords.
-
-### Competitors (`/competitors`)
-Per-brand compare table: mention hits, 7d, sentiment, SOV estimate.
-
-### Assistant (`/assistant`)
-Chat: brand health, complaints, competitors, what trend to join.
-
-### Entity profiles (`/entities/[type]/[slug]`)
-Graph pages for creators, sounds, topics, companies, etc. (trends redirect to `/database/[slug]`).
+Entity-graph tables from migrations `006`/`007` remain in the DB but are **unused** — ingest no longer writes to them.
 
 ---
 
-## Entity graph
+## Data pipelines (kept)
 
-Tables: `entities`, `entity_edges`, `trend_industry_stats`, bridges, `daily_briefs`.  
-Types: brand, trend, creator, sound, video, product, company, topic, keyword, meme, news.  
-Relations include: `adopted_by`, `in_industry`, `covered_by`, `created_by`, `uses_sound`, `about_topic`, `appears_in`.
+| Pipeline | Endpoint | Sources |
+|----------|----------|---------|
+| Daily trends ingest | `/api/cron/ingest` (+ admin button) | CreatorCrawl → classify → `reports`/`trends` |
+| Brand monitoring | `/api/cron/mentions` (+ Run monitoring) | CreatorCrawl social + SearchAPI web/news |
+| Brand research | `/api/brands/research` | Homepage fetch + SearchAPI + OpenAI |
+| Brand create | `/api/brands/create` | Supabase brands/keywords/socials |
 
-Migrations: `001` → `007`.
+Admin **Run daily ingest** is limited to `ianmcarson@gmail.com`.
 
 ---
 
 ## Auth & shell
 
-Nav: Dashboard · Brief · Search · Trends · Database · Opportunities · Brands · Competitors · Assistant · Settings.
-
-Protected prefixes include all of the above plus `/entities`.
-
----
-
-## Deferred (later)
-
-- Instagram-style mobile daily brief swipe
-- True WebSocket / live terminal updates
-- Full web crawl of every brand using a sound (Phase 3 uses ingest + mention graph only)
-
-See also [`PHASE3.md`](PHASE3.md) for the Phase 3 design notes.
+- Supabase Auth (email/password), RLS on user tables
+- `AppChrome` top nav: Trends · Memes · Mentions · Feedback · Brands
+- Protected: `/brands`, `/mentions`, `/feedback`, `/settings`
+- Trends and Memes are public; brands require login
 
 ---
 
-*For setup/deploy, see `README.md`.*
+## Migrations
+
+Run `001` → `007` in order. Treat `006_entity_graph` and `007_trend_adoption` as **legacy schema** (dormant).

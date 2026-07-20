@@ -1,3 +1,4 @@
+-- LEGACY / UNUSED by app code (four-pillar reset). Tables remain; ingest no longer writes here.
 -- Entity graph: permanent catalog of internet intelligence objects + relationships.
 -- Bridges existing brands/trends rows without breaking daily report snapshots.
 

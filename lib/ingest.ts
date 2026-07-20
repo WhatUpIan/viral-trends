@@ -1,7 +1,6 @@
 import { ingestAllPlatforms, type IngestStats } from "./adapters";
 import { classifyTrends, generateReportSummary } from "./classify";
 import { isCreatorCrawlConfigured } from "./creatorcrawl";
-import { linkReportEntities } from "./entity-link";
 import {
   getTodayDateString,
   markReportFailed,
@@ -93,17 +92,6 @@ export async function runDailyIngest(reportDate = getTodayDateString()): Promise
       summary,
       trends: persistTrends,
     });
-
-    // Best-effort entity graph — never fail the ingest on graph errors
-    try {
-      await linkReportEntities({
-        reportId,
-        reportDate,
-        trends: persistTrends,
-      });
-    } catch (err) {
-      console.warn("[ingest] entity link failed:", err);
-    }
 
     return {
       ok: true,

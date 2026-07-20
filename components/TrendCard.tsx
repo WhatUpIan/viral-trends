@@ -1,7 +1,5 @@
 import { formatNumber, platformLabel } from "@/lib/format";
-import { trendEntitySlug } from "@/lib/entities";
 import type { ReportTrend } from "@/lib/types";
-import Link from "next/link";
 import { ProxiedThumb } from "./ProxiedThumb";
 
 type Props = {
@@ -10,20 +8,18 @@ type Props = {
 };
 
 export function TrendCard({ trend, index }: Props) {
-  const dbHref = `/database/${trendEntitySlug(trend.platform, trend.externalId)}`;
-
   return (
     <article
       className="trend-card group"
       style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
     >
-      <div className="flex h-full flex-col">
-        <a
-          href={trend.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--ink-muted)]"
-        >
+      <a
+        href={trend.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex h-full flex-col"
+      >
+        <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--paper-soft)]">
           <ProxiedThumb
             src={trend.thumbnailUrl}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -32,23 +28,18 @@ export function TrendCard({ trend, index }: Props) {
           <span className="platform-badge absolute bottom-2 left-2">
             {platformLabel(trend.platform)}
           </span>
-        </a>
+        </div>
 
         <div className="flex flex-1 flex-col gap-1.5 p-3">
           <p className="text-[10px] uppercase tracking-wider text-[var(--fog)]">
             {trend.category}
           </p>
-
           <h3 className="line-clamp-2 font-[family-name:var(--font-display)] text-sm leading-snug text-[var(--ink)] sm:text-base">
-            <Link href={dbHref} className="hover:underline">
-              {trend.title}
-            </Link>
+            {trend.title}
           </h3>
-
           {trend.creatorHandle && (
             <p className="truncate text-xs text-[var(--fog)]">@{trend.creatorHandle}</p>
           )}
-
           <div className="mt-auto flex flex-wrap gap-x-2 gap-y-0.5 pt-1 text-[11px] text-[var(--fog)]">
             {trend.metrics.views != null && (
               <span>{formatNumber(trend.metrics.views)} views</span>
@@ -57,21 +48,13 @@ export function TrendCard({ trend, index }: Props) {
               <span>{formatNumber(trend.metrics.likes)} likes</span>
             )}
           </div>
-
           {trend.insight && (
             <p className="line-clamp-2 border-t border-[var(--line)] pt-2 text-[11px] leading-snug text-[var(--ink-soft)]">
               {trend.insight}
             </p>
           )}
-
-          <Link
-            href={dbHref}
-            className="pt-1 text-[11px] text-[var(--fog)] underline hover:text-[var(--ink)]"
-          >
-            Open in Trend Database
-          </Link>
         </div>
-      </div>
+      </a>
     </article>
   );
 }

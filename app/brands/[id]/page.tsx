@@ -6,14 +6,11 @@ import {
   getMentionComments,
   type BrandMention,
 } from "@/lib/brands";
-import { getBrandHealth } from "@/lib/brand-insights";
-import { AppShell } from "@/components/AppShell";
-import { BrandHealthStrip } from "@/components/BrandHealthStrip";
+import { AppChrome } from "@/components/AppChrome";
 import { BrandSocialFields } from "@/components/BrandSocialFields";
 import { FeedbackList } from "@/components/FeedbackList";
 import { MentionsList } from "@/components/MentionsList";
 import { RunMonitoringButton } from "@/components/RunMonitoringButton";
-import { getGreetingName } from "@/lib/greeting";
 import { getUser } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -62,9 +59,6 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
   const brand = await getBrand(id);
   if (!brand) notFound();
 
-  const greetingName = await getGreetingName();
-  const health = await getBrandHealth(id);
-
   const { tab: rawTab, platform, flag } = await searchParams;
   const tab =
     rawTab === "feedback" || rawTab === "profile" || rawTab === "mentions"
@@ -76,62 +70,48 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
   const platformFilter =
     PLATFORM_NAV.some((p) => p.id === platform) && platform ? platform : null;
 
+  const comments = tab === "feedback" ? await getMentionComments(id) : [];
+  const keywords = tab === "profile" ? await getBrandKeywords(id) : [];
+  const socialAccounts = tab === "profile" ? await getBrandSocialAccounts(id) : [];
+
   return (
-    <AppShell pathname="/brands" greetingName={greetingName}>
-      <div className="min-h-screen bg-[var(--paper)]">
-      {/* Top bar */}
-      <header className="border-b border-[var(--line)] bg-[var(--ink)] text-[var(--paper)]">
-        <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-8">
+    <AppChrome pathname="/brands">
+      <div className="page-hero">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-4 py-8 sm:px-6">
           <div className="min-w-0">
-            <Link
-              href="/brands"
-              className="text-xs text-[var(--paper-muted)] transition hover:text-[var(--paper)]"
-            >
-              ← All brands
+            <Link href="/brands" className="text-sm text-[var(--fog)] hover:text-[var(--ink)]">
+              ← Brands
             </Link>
-            <h1 className="truncate font-[family-name:var(--font-display)] text-2xl tracking-tight">
+            <h1 className="mt-2 truncate font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--ink)]">
               {brand.name}
             </h1>
-            <p className="truncate text-xs text-[var(--paper-muted)]">
+            <p className="mt-1 truncate text-sm text-[var(--fog)]">
               {brand.website ?? "No website"} ·{" "}
               {brand.status === "active" ? "Monitoring active" : "Paused"}
-              {health && health.score > 0
-                ? ` · Health ${health.score} (${health.sentimentLabel})`
-                : ""}
             </p>
           </div>
-          <div className="flex shrink-0 items-start gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <RunMonitoringButton brandId={brand.id} label="Run monitoring" />
             <form action={toggleBrandStatus.bind(null, brand.id, brand.status)}>
-              <button
-                type="submit"
-                className="border border-[var(--paper-muted)] px-3 py-1.5 text-xs text-[var(--paper)] transition hover:border-[var(--paper)]"
-              >
+              <button type="submit" className="btn-secondary text-xs">
                 {brand.status === "active" ? "Pause" : "Resume"}
               </button>
             </form>
             <form action={deleteBrand.bind(null, brand.id)}>
               <button
                 type="submit"
-                className="border border-[var(--heat)] px-3 py-1.5 text-xs text-[var(--heat)] transition hover:bg-[var(--heat)] hover:text-white"
+                className="rounded-md border border-[var(--heat)] px-3 py-1.5 text-xs text-[var(--heat)] transition hover:bg-[var(--heat)] hover:text-white"
               >
                 Delete
               </button>
             </form>
           </div>
         </div>
-      </header>
+      </div>
 
-      {health && (
-        <div className="border-b border-[var(--line)] px-5 py-5 sm:px-8">
-          <BrandHealthStrip health={health} />
-        </div>
-      )}
-
-      <div className="flex flex-col gap-0 lg:flex-row">
-        {/* Side menu */}
-        <aside className="border-b border-[var(--line)] bg-white lg:w-56 lg:shrink-0 lg:border-b-0 lg:border-r">
-          <nav className="sticky top-0 flex gap-1 overflow-x-auto px-3 py-4 lg:flex-col lg:overflow-visible lg:px-3 lg:py-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-0 px-4 sm:px-6 lg:flex-row">
+        <aside className="border-b border-[var(--line)] lg:w-52 lg:shrink-0 lg:border-b-0 lg:border-r lg:pr-4">
+          <nav className="sticky top-14 flex gap-1 overflow-x-auto py-4 lg:flex-col lg:overflow-visible lg:py-8">
             <p className="mb-1 hidden px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--fog)] lg:block">
               Mentions
             </p>
@@ -145,16 +125,16 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
                 <Link
                   key={p.label}
                   href={href}
-                  className={`flex items-center justify-between gap-2 whitespace-nowrap rounded-none px-3 py-2 text-sm transition ${
+                  className={`flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm transition ${
                     active
-                      ? "bg-[var(--ink)] font-medium text-[var(--paper)]"
-                      : "text-[var(--ink-soft)] hover:bg-[var(--paper)] hover:text-[var(--ink)]"
+                      ? "bg-[var(--ink)] font-medium text-white"
+                      : "text-[var(--ink-soft)] hover:bg-white hover:text-[var(--ink)]"
                   }`}
                 >
                   <span>{p.label}</span>
                   <span
                     className={`tabular-nums text-[11px] ${
-                      active ? "text-[var(--paper-muted)]" : "text-[var(--fog)]"
+                      active ? "text-white/70" : "text-[var(--fog)]"
                     }`}
                   >
                     {count}
@@ -165,34 +145,30 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
 
             <div className="my-2 hidden h-px bg-[var(--line)] lg:block" />
 
-            <p className="mb-1 hidden px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--fog)] lg:block">
-              Workspace
-            </p>
             <Link
               href={`/brands/${brand.id}?tab=feedback`}
-              className={`whitespace-nowrap px-3 py-2 text-sm transition ${
+              className={`whitespace-nowrap rounded-md px-3 py-2 text-sm transition ${
                 tab === "feedback"
-                  ? "bg-[var(--ink)] font-medium text-[var(--paper)]"
-                  : "text-[var(--ink-soft)] hover:bg-[var(--paper)] hover:text-[var(--ink)]"
+                  ? "bg-[var(--ink)] font-medium text-white"
+                  : "text-[var(--ink-soft)] hover:bg-white hover:text-[var(--ink)]"
               }`}
             >
               Feedback
             </Link>
             <Link
               href={`/brands/${brand.id}?tab=profile`}
-              className={`whitespace-nowrap px-3 py-2 text-sm transition ${
+              className={`whitespace-nowrap rounded-md px-3 py-2 text-sm transition ${
                 tab === "profile"
-                  ? "bg-[var(--ink)] font-medium text-[var(--paper)]"
-                  : "text-[var(--ink-soft)] hover:bg-[var(--paper)] hover:text-[var(--ink)]"
+                  ? "bg-[var(--ink)] font-medium text-white"
+                  : "text-[var(--ink-soft)] hover:bg-white hover:text-[var(--ink)]"
               }`}
             >
-              Brand profile
+              Profile
             </Link>
           </nav>
         </aside>
 
-        {/* Main content */}
-        <div className="min-w-0 flex-1 px-5 py-8 sm:px-8">
+        <div className="min-w-0 flex-1 py-8 lg:pl-8">
           {tab === "mentions" && (
             <MentionsList
               mentions={mentions}
@@ -202,21 +178,14 @@ export default async function BrandDetailPage({ params, searchParams }: Props) {
             />
           )}
 
-          {tab === "feedback" && (
-            <FeedbackList brandId={brand.id} comments={await getMentionComments(id)} />
-          )}
+          {tab === "feedback" && <FeedbackList brandId={brand.id} comments={comments} />}
 
           {tab === "profile" && (
-            <ProfileTab
-              brand={brand}
-              keywords={await getBrandKeywords(id)}
-              socialAccounts={await getBrandSocialAccounts(id)}
-            />
+            <ProfileTab brand={brand} keywords={keywords} socialAccounts={socialAccounts} />
           )}
         </div>
       </div>
-      </div>
-    </AppShell>
+    </AppChrome>
   );
 }
 
@@ -235,19 +204,25 @@ async function ProfileTab({
 
   return (
     <div className="mx-auto max-w-2xl space-y-12">
-      <section>
+      <section className="saas-panel p-6">
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
           Brand details
         </h2>
         <form action={updateBrand.bind(null, brand.id)} className="space-y-4">
           <div>
-            <label htmlFor="name" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
+            <label
+              htmlFor="name"
+              className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]"
+            >
               Brand name *
             </label>
             <input id="name" name="name" required defaultValue={brand.name} className="auth-input" />
           </div>
           <div>
-            <label htmlFor="website" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
+            <label
+              htmlFor="website"
+              className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]"
+            >
               Website
             </label>
             <input
@@ -259,7 +234,10 @@ async function ProfileTab({
             />
           </div>
           <div>
-            <label htmlFor="description" className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]">
+            <label
+              htmlFor="description"
+              className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--fog)]"
+            >
               Description
             </label>
             <textarea
@@ -277,9 +255,9 @@ async function ProfileTab({
       </section>
 
       {Object.keys(brand.metadata).length > 0 && (
-        <section>
+        <section className="saas-panel p-6">
           <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
-            Brand intelligence
+            Research profile
           </h2>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             {brand.metadata.industry && (
@@ -328,7 +306,7 @@ async function ProfileTab({
         </section>
       )}
 
-      <section>
+      <section className="saas-panel p-6">
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
           Social accounts
         </h2>
@@ -343,7 +321,7 @@ async function ProfileTab({
         </form>
       </section>
 
-      <section>
+      <section className="saas-panel p-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
             Generated keywords
@@ -357,7 +335,7 @@ async function ProfileTab({
         <KeywordPills brandId={brand.id} keywords={generated} />
       </section>
 
-      <section>
+      <section className="saas-panel p-6">
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
           Custom keywords
         </h2>
@@ -365,7 +343,7 @@ async function ProfileTab({
         <AddKeywordForm brandId={brand.id} kind="custom" placeholder="e.g. #acmesummer" />
       </section>
 
-      <section>
+      <section className="saas-panel p-6">
         <h2 className="mb-3 font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
           Negative keywords
         </h2>

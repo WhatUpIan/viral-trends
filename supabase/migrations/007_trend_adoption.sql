@@ -1,3 +1,4 @@
+-- LEGACY / UNUSED by app code (four-pillar reset).
 -- Trend industry adoption stats for Opportunity Engine v2
 
 create table if not exists trend_industry_stats (

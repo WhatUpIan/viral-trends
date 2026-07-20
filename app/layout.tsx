@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import { DM_Sans, Outfit } from "next/font/google";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Outfit({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
@@ -15,9 +15,9 @@ const body = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Signalbrief — Internet Intelligence",
+  title: "Signalbrief — US trends & brand listening",
   description:
-    "Internet intelligence for marketers: daily viral signals, brand health, morning brief, and mention monitoring across social and the web.",
+    "Track US video trends, memes, social/web brand mentions, and audience feedback — for marketers and creators.",
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

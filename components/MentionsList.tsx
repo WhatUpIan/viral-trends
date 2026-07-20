@@ -8,8 +8,8 @@ import Link from "next/link";
 type Props = {
   mentions: BrandMention[];
   brandId: string;
-  platformFilter: string | null;
-  flagFilter: "highlighted" | "unviewed" | null;
+  platformFilter?: string | null;
+  flagFilter?: "highlighted" | "unviewed" | null;
 };
 
 function sentimentBadge(sentiment: BrandMention["sentiment"]) {
@@ -18,7 +18,12 @@ function sentimentBadge(sentiment: BrandMention["sentiment"]) {
   return <span className="text-xs text-[var(--fog)]">Neutral</span>;
 }
 
-export function MentionsList({ mentions, brandId, platformFilter, flagFilter }: Props) {
+export function MentionsList({
+  mentions,
+  brandId,
+  platformFilter = null,
+  flagFilter = null,
+}: Props) {
   let filtered = platformFilter
     ? mentions.filter((m) => (m.platform ?? m.source) === platformFilter)
     : mentions;
